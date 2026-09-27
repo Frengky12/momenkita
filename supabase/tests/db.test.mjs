@@ -348,6 +348,17 @@ check('outsider sees no media', (await as(latecomer, `select * from public.invit
 await expectErr('anon cannot read media table', as('anon', `select * from public.invitation_media`), /permission denied/)
 check('manager deletes gallery photo', (await as(hostA, `delete from public.invitation_media where kind = 'gallery' and key_display like '%gal0%' returning id`)).length === 1)
 check('owner sees media rows', (await as(hostA, `select * from public.invitation_media where event_id = $1`, [ev.id])).length === 13)
+const insertMusic = (who, name, extra = '') =>
+  as(who, `insert into public.invitation_media (event_id, kind, key_display, bytes_display${extra ? ', key_thumb' : ''})
+    values ($1, 'music', $2, 5000000${extra ? ', $3' : ''}) returning id`,
+    extra ? [ev.id, mediaKey(`${name}/music.mp3`), mediaKey(extra)] : [ev.id, mediaKey(`${name}/music.mp3`)])
+check('owner adds background music without thumbnail or size', (await insertMusic(hostA, 'm1')).length === 1)
+await expectErr('only one music file per event', insertMusic(hostA, 'm2'), /duplicate key/)
+await expectErr('music cannot carry a thumbnail', insertMusic(hostB, 'm3', 'm3/thumb.webp'), /invitation_media_shape|duplicate key/)
+await as(hostA, `delete from public.invitation_media where kind = 'music'`)
+await expectErr('music with a thumbnail is rejected', insertMusic(hostA, 'm4', 'm4/thumb.webp'), /invitation_media_shape/)
+await expectErr('photos still need dimensions', as(hostA, `insert into public.invitation_media (event_id, kind, key_display, key_thumb, bytes_display)
+  values ($1, 'bride', $2, $3, 1000)`, [ev.id, mediaKey('b1/display.webp'), mediaKey('b1/thumb.webp')]), /invitation_media_shape/)
 
 console.log('\n# account deletion')
 const leaver = { id: await mkUser('leaver@x.id') }

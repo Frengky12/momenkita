@@ -4,6 +4,7 @@ import { Countdown } from "@/components/invitation/countdown";
 import { CopyText } from "@/components/invitation/copy-text";
 import { Gallery } from "@/components/invitation/gallery";
 import { MarkOpened } from "@/components/invitation/mark-opened";
+import { MusicPlayer } from "@/components/invitation/music-player";
 import { RsvpForm } from "@/components/invitation/rsvp-form";
 import { QrCode } from "@/components/qr-code";
 import { TIMEZONE_LABELS, coupleNames, formatDate, formatTime, type EventTimezone, type Person } from "@/lib/invitation/content";
@@ -49,6 +50,7 @@ export function KlasikInvitation({
         <p className="sticky top-0 z-10 bg-(--inv-band) px-4 py-2 text-center text-sm font-medium">Pratinjau. Undangan belum dipublikasikan.</p>
       )}
       {guest && !preview && <MarkOpened slug={event.slug} personalSlug={guest.personalSlug} />}
+      {media.music && <MusicPlayer url={media.music.url} />}
 
       <header className="flex min-h-dvh flex-col items-center justify-center gap-6 px-6 py-16 text-center">
         {media.cover && (
@@ -80,6 +82,7 @@ export function KlasikInvitation({
         )}
         <a
           href="#isi"
+          data-music-start
           className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-(--inv-button) px-8 text-sm font-semibold transition-colors hover:bg-(--inv-button-hover) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--inv-text)"
         >
           Buka undangan

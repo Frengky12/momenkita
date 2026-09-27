@@ -557,36 +557,36 @@ export type Database = {
           created_at: string
           created_by: string | null
           event_id: string
-          height: number
+          height: number | null
           id: string
           key_display: string
-          key_thumb: string
+          key_thumb: string | null
           kind: string
-          width: number
+          width: number | null
         }
         Insert: {
           bytes_display: number
           created_at?: string
           created_by?: string | null
           event_id: string
-          height: number
+          height?: number | null
           id?: string
           key_display: string
-          key_thumb: string
+          key_thumb?: string | null
           kind: string
-          width: number
+          width?: number | null
         }
         Update: {
           bytes_display?: number
           created_at?: string
           created_by?: string | null
           event_id?: string
-          height?: number
+          height?: number | null
           id?: string
           key_display?: string
-          key_thumb?: string
+          key_thumb?: string | null
           kind?: string
-          width?: number
+          width?: number | null
         }
         Relationships: [
           {

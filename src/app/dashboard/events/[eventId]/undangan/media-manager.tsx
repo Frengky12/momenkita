@@ -1,11 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { processPhoto } from "@/lib/camera/processor";
-import { GALLERY_MAX, MEDIA_KINDS, type MediaKind } from "@/lib/invitation/media-kinds";
-import type { InvitationMedia, MediaItem } from "@/lib/invitation/media";
-import { confirmMediaUpload, deleteMedia, prepareMediaUpload } from "./media-actions";
+import { GALLERY_MAX, MEDIA_KINDS, MUSIC_MAX_BYTES, musicTypeOf, type MediaKind } from "@/lib/invitation/media-kinds";
+import type { InvitationMedia, MediaItem, MusicItem } from "@/lib/invitation/media";
+import { confirmMediaUpload, confirmMusicUpload, deleteMedia, prepareMediaUpload, prepareMusicUpload } from "./media-actions";
 
 type Status = { kind: MediaKind; text: string; error?: boolean } | null;
 
@@ -15,7 +15,7 @@ export function MediaManager({ eventId, media }: { eventId: string; media: Invit
   const [status, setStatus] = useState<Status>(null);
   const busy = status !== null && !status.error;
 
-  async function upload(kind: MediaKind, files: File[]) {
+  async function upload(kind: Exclude<MediaKind, "music">, files: File[]) {
     for (const [index, file] of files.entries()) {
       const counter = files.length > 1 ? ` (${index + 1}/${files.length})` : "";
       try {
@@ -38,14 +38,32 @@ export function MediaManager({ eventId, media }: { eventId: string; media: Invit
     setStatus(null);
   }
 
-  async function remove(kind: MediaKind, item: MediaItem) {
+  async function uploadMusic(file: File, rightsConfirmed: boolean) {
+    const type = musicTypeOf(file);
+    if (!type) return setStatus({ kind: "music", text: "Format lagu harus MP3, M4A, atau AAC.", error: true });
+    if (file.size > MUSIC_MAX_BYTES) return setStatus({ kind: "music", text: `Ukuran lagu ${(file.size / 1048576).toFixed(1)} MB, maksimal 8 MB.`, error: true });
+    try {
+      setStatus({ kind: "music", text: "Mengunggah lagu..." });
+      const prepared = await prepareMusicUpload(eventId, type, file.size, rightsConfirmed);
+      if (!prepared.ok) return setStatus({ kind: "music", text: prepared.message, error: true });
+      const put = await fetch(prepared.url, { method: "PUT", headers: { "Content-Type": type }, body: file });
+      if (!put.ok) return setStatus({ kind: "music", text: "Unggahan gagal. Periksa koneksi lalu coba lagi.", error: true });
+      const confirmed = await confirmMusicUpload(eventId, prepared.mediaId, type);
+      if (!confirmed.ok) return setStatus({ kind: "music", text: confirmed.message, error: true });
+      setStatus(null);
+    } catch {
+      setStatus({ kind: "music", text: "Unggahan gagal. Periksa koneksi lalu coba lagi.", error: true });
+    }
+  }
+
+  async function remove(kind: MediaKind, item: { id: string }) {
     if (!window.confirm(`Hapus ${MEDIA_KINDS[kind].label.toLowerCase()} ini?`)) return;
     setStatus({ kind, text: "Menghapus..." });
     const result = await deleteMedia(eventId, item.id);
     setStatus(result.ok ? null : { kind, text: result.message, error: true });
   }
 
-  const single = (kind: Exclude<MediaKind, "gallery">) => (
+  const single = (kind: Exclude<MediaKind, "gallery" | "music">) => (
     <Slot
       kind={kind}
       items={media[kind] ? [media[kind]] : []}
@@ -74,6 +92,79 @@ export function MediaManager({ eventId, media }: { eventId: string; media: Invit
         onRemove={(item) => remove("gallery", item)}
       />
       {single("qris")}
+      <MusicSlot
+        music={media.music}
+        busy={busy}
+        status={status?.kind === "music" ? status : null}
+        onFile={uploadMusic}
+        onRemove={(item) => remove("music", item)}
+      />
+    </div>
+  );
+}
+
+// Lagu diunggah apa adanya (tanpa kompresi) dan hanya setelah host menyatakan berhak memakainya.
+function MusicSlot({
+  music,
+  busy,
+  status,
+  onFile,
+  onRemove,
+}: {
+  music: MusicItem | null;
+  busy: boolean;
+  status: Status;
+  onFile: (file: File, rightsConfirmed: boolean) => void;
+  onRemove: (item: MusicItem) => void;
+}) {
+  const input = useRef<HTMLInputElement>(null);
+  const id = useId();
+  const [rights, setRights] = useState(false);
+  const { label, hint } = MEDIA_KINDS.music;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div>
+        <p className="font-medium">{label}</p>
+        <p className="text-sm text-muted-foreground">{hint}</p>
+      </div>
+      {music && (
+        <div className="flex flex-col gap-2">
+          {/* preload="none": host baru mengunduh lagu saat menekan putar. */}
+          <audio controls preload="none" src={music.url} className="w-full max-w-md" aria-label="Putar musik latar" />
+          <Button type="button" variant="outline" className="h-11 w-fit" disabled={busy} onClick={() => onRemove(music)}>
+            Hapus lagu
+          </Button>
+        </div>
+      )}
+      <label htmlFor={`${id}-rights`} className="flex min-h-11 items-start gap-3 text-sm">
+        <input id={`${id}-rights`} type="checkbox" className="mt-0.5 size-5 shrink-0 accent-primary" checked={rights} onChange={(e) => setRights(e.target.checked)} />
+        <span>Saya berhak memakai lagu ini di undangan dan bertanggung jawab atas hak ciptanya.</span>
+      </label>
+      <input
+        ref={input}
+        type="file"
+        accept="audio/mpeg,audio/mp4,audio/aac,audio/x-m4a,.mp3,.m4a,.aac"
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden
+        onChange={(e) => {
+          const file = e.currentTarget.files?.[0];
+          e.currentTarget.value = "";
+          if (file) onFile(file, rights);
+        }}
+      />
+      <div className="flex flex-wrap items-center gap-3">
+        <Button type="button" variant="outline" className="h-11" disabled={busy || !rights} onClick={() => input.current?.click()}>
+          {music ? "Ganti lagu" : "Pilih lagu"}
+        </Button>
+        {!rights && !status && <p className="text-sm text-muted-foreground">Centang pernyataan di atas untuk memilih lagu.</p>}
+        {status && (
+          <p aria-live="polite" className={status.error ? "text-sm text-destructive" : "text-sm text-muted-foreground"}>
+            {status.text}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
