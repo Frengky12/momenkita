@@ -95,7 +95,7 @@ Vercel `https://momenkita-hazel.vercel.app` (region sin1, paket Hobby).
 | 6 | Kompatibilitas perangkat | ⏳ | Matriks uji: Android Chrome, iOS Safari 16+, in-app WhatsApp/Instagram, Chrome desktop panggung. |
 | 7 | Keamanan | ⚠️ | Token 128-bit, RLS semua tabel, signed URL ber-TTL, rate limit presign/RSVP/passcode/laporan, link staf kedaluwarsa H+1 ✅. Security review menyeluruh ⏳. |
 | 8 | Backup harian | ⏳ | Bawaan Supabase Pro; project dev masih paket gratis. |
-| 9 | Observability | ⚠️ | Monitor "Acara hari ini" di `/admin` ✅. Error tracking (Sentry atau sejenis) ⏳. |
+| 9 | Observability | ⚠️ | Monitor "Acara hari ini" di `/admin` ✅. Sentry terpasang dan diuji dengan penerima tiruan (error server, error yang ditangani, error browser, error render; privasi tersaring) ✅. Aktif di produksi setelah DSN diisi di Vercel ⏳. |
 | 10 | Bahasa Indonesia | ✅ | |
 
 ### Load test skala kecil
@@ -129,7 +129,7 @@ Di Vercel, server berada satu region dengan Supabase (ap-southeast-1), sehingga 
 1. Domain sendiri untuk deploy Vercel (sekarang `momenkita-hazel.vercel.app`, paket Hobby yang hanya untuk non-komersial): perbarui Site URL Supabase, CORS R2, dan URL notifikasi Midtrans saat domain berganti. Uji webhook Midtrans sungguhan lewat pembayaran sandbox di produksi.
 2. Email: SMTP sendiri sudah dipasang dan template login berbahasa Indonesia ada di `supabase/templates/`. Sisa: uji login lewat email di produksi (termasuk buka link di perangkat lain) dan email invoice.
 3. Job retensi album (hapus file setelah masa simpan) beserta email pengingat H-30/H-7; bergantung pada email.
-4. Error tracking dan pemantauan hari-H.
+4. Isi DSN Sentry di Vercel (kode error tracking sudah terpasang) lalu pasang alert email/Slack untuk error baru.
 5. Uji perangkat nyata (matriks §8 baris 6), termasuk scanner kamera, kamera tamu di WhatsApp, cabut kabel 5 menit, dan ZIP 1.000 foto di Chrome.
 6. Load test skala penuh di staging.
 7. Angkat akun admin tim (lihat README, Catatan operasional) dan uji custom domain sungguhan untuk calon pilot Luxury.

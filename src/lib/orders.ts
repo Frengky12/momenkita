@@ -1,5 +1,6 @@
 import "server-only";
 import { cancelTransaction, getTransactionStatus } from "@/lib/midtrans";
+import { reportError } from "@/lib/report-error";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type OrderOutcome = "paid" | "pending" | "expired" | "failed" | "not_found" | "error";
@@ -30,7 +31,7 @@ export async function reconcileOrder(orderId: string): Promise<OrderOutcome> {
     });
     if (error) {
       // Dana sudah masuk tetapi pesanan tidak bisa dipenuhi (misalnya paket sudah aktif dari pesanan lain): refund manual.
-      console.error(`PERLU REFUND MANUAL: order ${orderId} lunas di Midtrans tetapi fulfill_order gagal: ${error.message}`);
+      reportError(`PERLU REFUND MANUAL: order ${orderId} lunas di Midtrans tetapi fulfill_order gagal: ${error.message}`, undefined, { orderId });
       return "error";
     }
     await cancelSupersededOrders(admin, orderId);
@@ -68,7 +69,7 @@ export async function cancelPendingPackageOrders(eventId: string, exceptOrderId?
         await admin.from("orders").update({ status: "failed" }).eq("id", order.id).eq("status", "pending");
       }
     } catch (e) {
-      console.error(`Gagal membatalkan pesanan ${order.id}:`, e);
+      reportError(`Gagal membatalkan pesanan ${order.id} di Midtrans`, e, { orderId: order.id });
     }
   }
 }

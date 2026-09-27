@@ -1,6 +1,7 @@
 import "server-only";
 import { createHmac } from "node:crypto";
 import { headers } from "next/headers";
+import { reportError } from "@/lib/report-error";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 // Gagal terbuka: bila pengecekan batas error, aksi tetap diizinkan karena RSVP yang gagal lebih merugikan daripada spam sesaat.
@@ -11,7 +12,7 @@ export async function allowAction(key: string, limit: number, windowSeconds: num
     p_window_seconds: windowSeconds,
   });
   if (error) {
-    console.error(`hit_rate_limit gagal untuk ${key}: ${error.message}`);
+    reportError(`hit_rate_limit gagal: ${error.message}`, undefined, { scope: key.split(":")[0] });
     return true;
   }
   return data === true;

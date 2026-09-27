@@ -1,6 +1,7 @@
 import "server-only";
 import { after, NextResponse } from "next/server";
 import type { GuestToken } from "@/lib/guest-token";
+import { reportError } from "@/lib/report-error";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export { CONSENT_VERSION } from "@/lib/camera/consent";
@@ -61,7 +62,7 @@ export async function recordUploadRejection(response: Response, eventId: string,
   if (code === "too_fast") return;
   after(async () => {
     const { error } = await createAdminClient().from("upload_errors").insert({ event_id: eventId, stage, code });
-    if (error) console.error(`upload_errors gagal dicatat: ${error.message}`);
+    if (error) reportError(`upload_errors gagal dicatat: ${error.message}`, undefined, { eventId, stage });
   });
 }
 

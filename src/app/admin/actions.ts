@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { cancelPendingPackageOrders, reconcileOrder } from "@/lib/orders";
 import { deleteObjects } from "@/lib/r2";
+import { reportError } from "@/lib/report-error";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -90,7 +91,8 @@ export async function takedownPhoto(photoId: string, _prev: AdminState, formData
   refresh();
   try {
     await deleteObjects((data as { keys: string[] }).keys);
-  } catch {
+  } catch (e) {
+    reportError("Takedown: file foto di R2 gagal dihapus", e, { photoId });
     return failed("Foto sudah diturunkan dari panggung dan galeri, tetapi file di R2 gagal dihapus. Ulangi dari log atau hapus manual.");
   }
   return done("Foto diturunkan dan filenya dihapus permanen.");

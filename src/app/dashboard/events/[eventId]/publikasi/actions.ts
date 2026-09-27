@@ -6,6 +6,7 @@ import type { SaveState } from "@/components/dashboard/section-form";
 import { requestOrigin } from "@/lib/invitation/origin";
 import { createSnapTransaction } from "@/lib/midtrans";
 import { reconcileOrder, type OrderOutcome } from "@/lib/orders";
+import { reportError } from "@/lib/report-error";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -57,7 +58,7 @@ export async function startCheckout(eventId: string, itemCode: string): Promise<
     });
     redirectUrl = snap.redirectUrl;
   } catch (e) {
-    console.error(e);
+    reportError("Halaman pembayaran Midtrans gagal dibuat", e, { orderId: order.id });
     await admin.from("orders").update({ status: "failed" }).eq("id", order.id);
     return failed("Halaman pembayaran gagal dibuka. Coba lagi beberapa saat lagi.");
   }

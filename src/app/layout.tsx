@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { ErrorListener } from "@/components/error-listener";
 import { cn } from "@/lib/utils";
 
 // Inter mengikuti referensi desain (nobruf/shadcn-landing-page).
@@ -12,11 +13,14 @@ export const metadata: Metadata = {
 };
 
 // Layout ini juga membungkus halaman kamera tamu (target JS awal ≤ 150KB gzip, PRD §8):
-// jangan tambahkan provider atau client berat di sini.
+// jangan tambahkan provider atau client berat di sini. ErrorListener hanya memasang listener; SDK Sentry dimuat saat ada error.
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="id" className={cn("h-full antialiased font-sans", inter.variable)}>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <ErrorListener />
+        {children}
+      </body>
     </html>
   );
 }

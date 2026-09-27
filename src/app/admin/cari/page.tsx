@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EVENT_STATUS_LABEL, ORDER_STATUS_LABEL, PACKAGE_LABEL, dateTime, rupiah } from "@/lib/admin";
+import { reportError } from "@/lib/report-error";
 import { requireAdmin } from "../guard";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -30,7 +31,7 @@ export default async function AdminSearchPage({ searchParams }: PageProps<"/admi
     !term ? orderQuery : isId ? orderQuery.or(`id.eq.${q},event_id.eq.${q},profile_id.eq.${q}`) : orderQuery.eq("provider_ref", term),
   ]);
   const failed = events?.error || profiles?.error || orders.error;
-  if (failed) console.error(`Pencarian admin gagal: ${failed.message}`);
+  if (failed) reportError(`Pencarian admin gagal: ${failed.message}`);
   const empty = term && !failed && !events?.data?.length && !profiles?.data?.length && !orders.data?.length;
 
   return (
