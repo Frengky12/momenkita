@@ -9,7 +9,8 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-heading: var(--font-sans);
-  --font-display: var(--font-cormorant);
+  /* Tema undangan boleh mengganti huruf dekoratifnya lewat --inv-font-display; halaman lain tetap Cormorant. */
+  --font-display: var(--inv-font-display, var(--font-cormorant));
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -142,7 +143,40 @@
   --inv-field: #8f7040;
   --inv-button: #c9a86a;
   --inv-button-hover: #bd9a58;
+  --inv-button-text: #3b2a1e;
   --inv-band: #e9dfcf;
   --inv-error: #9b2c2c;
   color-scheme: light;
+}
+
+/* Tema "Botani" (docs/DESIGN_UNDANGAN.md): kertas krem, daun sage, tembaga. Kontras teks dicek AA:
+   teks 10.0:1, sage 5.1:1, tembaga 5.4:1, tombol putih di tembaga 5.8:1. Daun dan garis tembaga muda hanya dekorasi. */
+.theme-botani {
+  --inv-bg: #f6f0e8;
+  --inv-card: #fffbf5;
+  --inv-text: #3d3a34;
+  --inv-muted: #5c6961;
+  --inv-accent: #95502c;
+  --inv-ornament: #c49a74;
+  --inv-leaf: #6f8f80;
+  --inv-leaf-fill: #dde7df;
+  --inv-bloom: #c2a45e;
+  --inv-bloom-fill: #f4ead0;
+  --inv-line: #e5d9c8;
+  --inv-field: #8a7560;
+  --inv-button: #9a532e;
+  --inv-button-hover: #82452a;
+  --inv-button-text: #ffffff;
+  --inv-band: #ece3d6;
+  --inv-error: #9b2c2c;
+  --inv-font-display: var(--font-italiana);
+  font-family: var(--font-dm-sans), var(--font-sans), sans-serif;
+  /* Bintik kertas sangat halus, identitas "kertas undangan" dari referensi 1. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27180%27 height=%27180%27%3E%3Cg fill=%27%23a8957a%27 fill-opacity=%27.16%27%3E%3Ccircle cx=%2712%27 cy=%2718%27 r=%27.9%27/%3E%3Ccircle cx=%2771%27 cy=%2744%27 r=%271.2%27/%3E%3Ccircle cx=%27140%27 cy=%2711%27 r=%27.7%27/%3E%3Ccircle cx=%2733%27 cy=%27101%27 r=%271%27/%3E%3Ccircle cx=%27118%27 cy=%2788%27 r=%27.8%27/%3E%3Ccircle cx=%27164%27 cy=%27129%27 r=%271.1%27/%3E%3Ccircle cx=%2758%27 cy=%27156%27 r=%27.8%27/%3E%3Ccircle cx=%27101%27 cy=%27170%27 r=%271%27/%3E%3Ccircle cx=%27150%27 cy=%2762%27 r=%27.6%27/%3E%3C/g%3E%3C/svg%3E");
+  color-scheme: light;
+}
+/* Italiana hanya punya satu ketebalan tanpa miring; cegah tebal dan miring palsu dari kelas bersama. */
+.theme-botani .font-display {
+  font-weight: 400;
+  font-style: normal;
 }

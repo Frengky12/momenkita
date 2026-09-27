@@ -1,4 +1,3 @@
-import { Cormorant_Garamond } from "next/font/google";
 import Link from "next/link";
 import { Countdown } from "@/components/invitation/countdown";
 import { CopyText } from "@/components/invitation/copy-text";
@@ -6,6 +5,7 @@ import { Gallery } from "@/components/invitation/gallery";
 import { MarkOpened } from "@/components/invitation/mark-opened";
 import { MusicPlayer } from "@/components/invitation/music-player";
 import { RsvpForm } from "@/components/invitation/rsvp-form";
+import { THEME_STYLES } from "@/components/invitation/themes";
 import { QrCode } from "@/components/qr-code";
 import { TIMEZONE_LABELS, coupleNames, formatDate, formatTime, type EventTimezone, type Person } from "@/lib/invitation/content";
 import { googleCalendarUrl, mapsUrl, wazeUrl } from "@/lib/invitation/links";
@@ -13,15 +13,14 @@ import type { InvitationData } from "@/lib/invitation/load";
 import type { MediaItem } from "@/lib/invitation/media";
 import { cn } from "@/lib/utils";
 
-// Serif kontras tinggi bernuansa undangan cetak; hanya untuk nama dan judul, teks isi tetap Inter agar nyaman dibaca di HP.
-const display = Cormorant_Garamond({ subsets: ["latin"], weight: ["500", "600"], style: ["normal", "italic"], variable: "--font-cormorant" });
 
 const GENERAL_MAX_PAX = 5;
 
 const pillLink =
   "inline-flex min-h-11 items-center justify-center rounded-full border border-(--inv-field) px-4 text-sm font-medium transition-colors hover:bg-(--inv-band) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--inv-text)";
 
-export function KlasikInvitation({
+// Kerangka undangan untuk semua tema; tampilan per tema diatur THEME_STYLES (themes.tsx) dan token .theme-* di globals.css.
+export function Invitation({
   data,
   invitationUrl,
   icsBaseUrl,
@@ -35,6 +34,8 @@ export function KlasikInvitation({
   const { event, sessions, guest, wishes, media } = data;
   const { content, gifts, timezone } = event;
   const [first, second] = coupleNames(content);
+  const style = THEME_STYLES[content.theme];
+  const { Divider, CoverDecor } = style;
   const [firstPhoto, secondPhoto] = content.couple.order === "bride-first" ? [media.bride, media.groom] : [media.groom, media.bride];
   const tz = TIMEZONE_LABELS[timezone as EventTimezone] ?? "";
   const mainSession = sessions[0];
@@ -45,14 +46,19 @@ export function KlasikInvitation({
   const cameraOpen = experience && eventDay && !preview;
 
   return (
-    <div className={cn(display.variable, "theme-klasik min-h-dvh bg-(--inv-bg) text-(--inv-text)")}>
+    <div className={cn(style.rootClass, "min-h-dvh bg-(--inv-bg) text-(--inv-text)")}>
       {preview && (
         <p className="sticky top-0 z-10 bg-(--inv-band) px-4 py-2 text-center text-sm font-medium">Pratinjau. Undangan belum dipublikasikan.</p>
       )}
       {guest && !preview && <MarkOpened slug={event.slug} personalSlug={guest.personalSlug} />}
       {media.music && <MusicPlayer url={media.music.url} />}
 
-      <header className="flex min-h-dvh flex-col items-center justify-center gap-6 px-6 py-16 text-center">
+      <header className="relative isolate flex min-h-dvh flex-col items-center justify-center gap-6 overflow-hidden px-6 py-16 text-center">
+        {CoverDecor && (
+          <div className="absolute inset-0 -z-10">
+            <CoverDecor />
+          </div>
+        )}
         {media.cover && (
           // Bingkai lengkung khas undangan cetak; foto dipotong ke rasio 4:5 agar sampul tetap muat satu layar HP.
           // eslint-disable-next-line @next/next/no-img-element -- signed URL R2
@@ -62,16 +68,21 @@ export function KlasikInvitation({
             width={media.cover.width}
             height={media.cover.height}
             fetchPriority="high"
-            className="aspect-[4/5] h-[46dvh] max-h-[28rem] w-auto rounded-t-full border-4 border-(--inv-card) object-cover shadow-sm"
+            className={cn(
+              "aspect-[4/5] w-auto rounded-t-full object-cover",
+              style.photoFrame === "arch"
+                ? "h-[40dvh] max-h-[24rem] outline-1 outline-offset-6 outline-(--inv-ornament)"
+                : "h-[46dvh] max-h-[28rem] border-4 border-(--inv-card) shadow-sm",
+            )}
           />
         )}
-        <p className="font-display text-xl italic text-(--inv-accent)">Undangan Pernikahan</p>
+        <p className={style.coverLabel}>Undangan Pernikahan</p>
         <h1 className="font-display text-5xl leading-tight font-semibold [overflow-wrap:anywhere] sm:text-6xl">
           {first.nickname}
           <span className="mx-3 italic text-(--inv-accent)">&amp;</span>
           {second.nickname}
         </h1>
-        <Ornament />
+        <Divider />
         {mainSession && <p className="text-base">{formatDate(mainSession.starts_at, timezone)}</p>}
         {guest && (
           <div className="mt-6 flex flex-col gap-1">
@@ -83,7 +94,7 @@ export function KlasikInvitation({
         <a
           href="#isi"
           data-music-start
-          className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-(--inv-button) px-8 text-sm font-semibold transition-colors hover:bg-(--inv-button-hover) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--inv-text)"
+          className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-(--inv-button) px-8 text-(--inv-button-text) text-sm font-semibold transition-colors hover:bg-(--inv-button-hover) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--inv-text)"
         >
           Buka undangan
         </a>
@@ -104,11 +115,11 @@ export function KlasikInvitation({
           <h2 id="mempelai" className="sr-only">
             Mempelai
           </h2>
-          <Profile person={first} photo={firstPhoto} role={content.couple.order === "bride-first" ? "Putri" : "Putra"} />
+          <Profile person={first} photo={firstPhoto} frame={style.photoFrame} role={content.couple.order === "bride-first" ? "Putri" : "Putra"} />
           <p className="font-display text-5xl text-(--inv-accent) italic" aria-hidden>
             &amp;
           </p>
-          <Profile person={second} photo={secondPhoto} role={content.couple.order === "bride-first" ? "Putra" : "Putri"} />
+          <Profile person={second} photo={secondPhoto} frame={style.photoFrame} role={content.couple.order === "bride-first" ? "Putra" : "Putri"} />
         </section>
 
         {mainSession && (
@@ -119,7 +130,7 @@ export function KlasikInvitation({
 
         {media.gallery.length > 0 && (
           <section aria-labelledby="galeri" className="flex flex-col gap-6">
-            <SectionTitle id="galeri">Galeri</SectionTitle>
+            <SectionTitle id="galeri" Divider={Divider}>Galeri</SectionTitle>
             <Gallery items={media.gallery} alt={`Galeri ${first.nickname} dan ${second.nickname}`} />
           </section>
         )}
@@ -132,7 +143,7 @@ export function KlasikInvitation({
             <p className="text-(--inv-muted)">Abadikan momen hari ini dari sudut pandangmu. Fotonya tampil di layar acara.</p>
             <a
               href={`/${event.slug}/kamera${guest ? `?tamu=${encodeURIComponent(guest.personalSlug)}` : ""}`}
-              className="inline-flex min-h-11 items-center justify-center rounded-full bg-(--inv-button) px-8 text-sm font-semibold transition-colors hover:bg-(--inv-button-hover) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--inv-text)"
+              className="inline-flex min-h-11 items-center justify-center rounded-full bg-(--inv-button) px-8 text-(--inv-button-text) text-sm font-semibold transition-colors hover:bg-(--inv-button-hover) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--inv-text)"
             >
               Buka kamera
             </a>
@@ -151,7 +162,7 @@ export function KlasikInvitation({
         )}
 
         <section aria-labelledby="acara" className="flex flex-col gap-6">
-          <SectionTitle id="acara">Rangkaian Acara</SectionTitle>
+          <SectionTitle id="acara" Divider={Divider}>Rangkaian Acara</SectionTitle>
           {sessions.map((session) => (
             <article key={session.id} className="flex flex-col items-center gap-3 rounded-2xl border border-(--inv-line) bg-(--inv-card) px-5 py-8 text-center">
               <h3 className="font-display text-3xl font-semibold">{session.name}</h3>
@@ -188,7 +199,7 @@ export function KlasikInvitation({
         </section>
 
         <section aria-labelledby="rsvp" className="flex flex-col gap-6">
-          <SectionTitle id="rsvp">Konfirmasi Kehadiran</SectionTitle>
+          <SectionTitle id="rsvp" Divider={Divider}>Konfirmasi Kehadiran</SectionTitle>
           <div className="rounded-2xl border border-(--inv-line) bg-(--inv-card) px-5 py-8">
             {data.rsvpOpen ? (
               <RsvpForm
@@ -205,7 +216,7 @@ export function KlasikInvitation({
         </section>
 
         <section aria-labelledby="ucapan" className="flex flex-col gap-6">
-          <SectionTitle id="ucapan">Ucapan &amp; Doa</SectionTitle>
+          <SectionTitle id="ucapan" Divider={Divider}>Ucapan &amp; Doa</SectionTitle>
           {wishes.length === 0 ? (
             <p className="text-center text-(--inv-muted)">Belum ada ucapan. Tulis doa kamu lewat form konfirmasi di atas.</p>
           ) : (
@@ -225,7 +236,7 @@ export function KlasikInvitation({
 
         {(gifts.accounts.length > 0 || gifts.address || media.qris) && (
           <section aria-labelledby="amplop" className="flex flex-col gap-6 text-center">
-            <SectionTitle id="amplop">Amplop Digital</SectionTitle>
+            <SectionTitle id="amplop" Divider={Divider}>Amplop Digital</SectionTitle>
             <p className="text-(--inv-muted)">Doa restu kamu sudah lebih dari cukup. Jika ingin memberi tanda kasih, bisa melalui:</p>
             {gifts.accounts.map((account) => (
               <div key={`${account.bank}-${account.number}`} className="flex flex-col items-center gap-2 rounded-2xl border border-(--inv-line) bg-(--inv-card) px-5 py-6">
@@ -261,7 +272,7 @@ export function KlasikInvitation({
         )}
 
         <section className="flex flex-col items-center gap-6 text-center">
-          <Ornament />
+          <Divider />
           {content.texts.closing && <p className="leading-relaxed whitespace-pre-line">{content.texts.closing}</p>}
           <p className="font-display text-4xl font-semibold">
             {first.nickname} <span className="italic text-(--inv-accent)">&amp;</span> {second.nickname}
@@ -279,28 +290,18 @@ export function KlasikInvitation({
   );
 }
 
-function Ornament() {
-  return (
-    <div className="flex items-center gap-3 text-(--inv-ornament)" aria-hidden>
-      <span className="h-px w-16 bg-current" />
-      <span>✦</span>
-      <span className="h-px w-16 bg-current" />
-    </div>
-  );
-}
-
-function SectionTitle({ id, children }: { id: string; children: React.ReactNode }) {
+function SectionTitle({ id, Divider, children }: { id: string; Divider: () => React.ReactNode; children: React.ReactNode }) {
   return (
     <div className="flex flex-col items-center gap-3">
       <h2 id={id} className="font-display text-center text-4xl font-semibold">
         {children}
       </h2>
-      <Ornament />
+      <Divider />
     </div>
   );
 }
 
-function Profile({ person, role, photo }: { person: Person; role: "Putra" | "Putri"; photo: MediaItem | null }) {
+function Profile({ person, role, photo, frame }: { person: Person; role: "Putra" | "Putri"; photo: MediaItem | null; frame: "circle" | "arch" }) {
   const parents = [person.father, person.mother].filter(Boolean).join(" & ");
   return (
     <div className="flex flex-col items-center gap-2">
@@ -312,7 +313,11 @@ function Profile({ person, role, photo }: { person: Person; role: "Putra" | "Put
           width={photo.width}
           height={photo.height}
           loading="lazy"
-          className="mb-2 size-40 rounded-full border-4 border-(--inv-card) object-cover shadow-sm"
+          className={
+            frame === "arch"
+              ? "mb-4 aspect-[3/4] w-40 rounded-t-full object-cover outline-1 outline-offset-4 outline-(--inv-ornament)"
+              : "mb-2 size-40 rounded-full border-4 border-(--inv-card) object-cover shadow-sm"
+          }
         />
       )}
       <p className="font-display text-4xl font-semibold [overflow-wrap:anywhere]">{person.fullName || person.nickname}</p>

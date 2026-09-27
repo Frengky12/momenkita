@@ -1,7 +1,11 @@
 // Isi undangan tersimpan di events.theme_config dan events.gift_config (jsonb).
 // Parser di sini selalu mengembalikan bentuk lengkap, sehingga halaman undangan tidak rusak karena field kosong atau data lama.
 
-export const THEMES = { klasik: "Elegan klasik" } as const;
+export const THEMES = { klasik: "Elegan klasik", botani: "Botani" } as const;
+export const THEME_DESCRIPTIONS: Record<keyof typeof THEMES, string> = {
+  klasik: "Krem dan emas, huruf serif klasik, foto mempelai bulat.",
+  botani: "Kertas krem dengan ranting daun dan bunga, aksen tembaga, foto berbingkai lengkung.",
+};
 export type ThemeId = keyof typeof THEMES;
 
 export type Person = { nickname: string; fullName: string; father: string; mother: string; instagram: string };

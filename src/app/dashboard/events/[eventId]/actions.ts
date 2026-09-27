@@ -6,11 +6,13 @@ import type { SaveState } from "@/components/dashboard/section-form";
 import {
   LIMITS,
   MAX_GIFT_ACCOUNTS,
+  THEMES,
   parseContent,
   slugify,
   toUtcIso,
   type InvitationContent,
   type Person,
+  type ThemeId,
 } from "@/lib/invitation/content";
 import { createClient } from "@/lib/supabase/server";
 
@@ -90,6 +92,12 @@ export async function saveGifts(eventId: string, _prev: SaveState, formData: For
   if (error) return failed("Gagal menyimpan. Coba lagi.");
   refresh();
   return saved();
+}
+
+export async function saveTheme(eventId: string, _prev: SaveState, formData: FormData): Promise<SaveState> {
+  const theme = field(formData, "theme");
+  if (!(theme in THEMES)) return failed("Pilih salah satu tema.");
+  return updateContent(eventId, (c) => ({ ...c, theme: theme as ThemeId }));
 }
 
 export async function saveSettings(eventId: string, _prev: SaveState, formData: FormData): Promise<SaveState> {

@@ -132,7 +132,7 @@ export function RsvpForm({
       <button
         type="submit"
         disabled={pending || preview}
-        className="inline-flex min-h-11 items-center justify-center rounded-full bg-(--inv-button) px-6 text-sm font-semibold transition-colors hover:bg-(--inv-button-hover) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--inv-text) disabled:opacity-60"
+        className="inline-flex min-h-11 items-center justify-center rounded-full bg-(--inv-button) px-6 text-sm font-semibold text-(--inv-button-text) transition-colors hover:bg-(--inv-button-hover) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--inv-text) disabled:opacity-60"
       >
         {pending ? "Mengirim..." : "Kirim konfirmasi"}
       </button>

@@ -7,6 +7,7 @@ import {
   LIMITS,
   MAX_GIFT_ACCOUNTS,
   THEMES,
+  THEME_DESCRIPTIONS,
   TIMEZONE_LABELS,
   parseContent,
   parseGifts,
@@ -16,7 +17,7 @@ import {
 } from "@/lib/invitation/content";
 import { loadMedia } from "@/lib/invitation/media";
 import { createClient } from "@/lib/supabase/server";
-import { deleteDraftEvent, deleteSession, saveCouple, saveGifts, saveSession, saveSettings, saveTexts } from "../actions";
+import { deleteDraftEvent, deleteSession, saveCouple, saveGifts, saveSession, saveSettings, saveTexts, saveTheme } from "../actions";
 import { MediaManager } from "./media-manager";
 
 type Session = { id: string; name: string; starts_at: string; ends_at: string; venue_name: string | null; venue_address: string | null };
@@ -55,6 +56,26 @@ export default async function InvitationEditorPage({ params }: PageProps<"/dashb
               <option value="bride-first">Wanita lebih dulu</option>
             </select>
           </Field>
+        </SectionForm>
+      </Section>
+
+      <Section title="Tema" description="Semua tema memakai isi yang sama; ganti kapan saja lalu lihat hasilnya di tab Pratinjau.">
+        <SectionForm action={saveTheme.bind(null, event.id)} submitLabel="Simpan tema">
+          <fieldset className="grid gap-3 sm:grid-cols-2">
+            <legend className="sr-only">Tema undangan</legend>
+            {(Object.keys(THEMES) as (keyof typeof THEMES)[]).map((id) => (
+              <label
+                key={id}
+                className="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border p-4 has-[:checked]:border-primary has-[:checked]:bg-primary/5 has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50"
+              >
+                <input type="radio" name="theme" value={id} defaultChecked={content.theme === id} className="mt-1 size-4 accent-primary" />
+                <span className="flex flex-col gap-1">
+                  <span className="font-medium">{THEMES[id]}</span>
+                  <span className="text-sm text-muted-foreground">{THEME_DESCRIPTIONS[id]}</span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
         </SectionForm>
       </Section>
 
@@ -169,7 +190,7 @@ export default async function InvitationEditorPage({ params }: PageProps<"/dashb
             </Field>
           </div>
           <p className="text-sm text-muted-foreground">
-            Tema: {THEMES[content.theme]}. Zona waktu: {tzLabel}.
+            Zona waktu: {tzLabel}.
           </p>
         </SectionForm>
       </Section>

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { KlasikInvitation } from "@/components/invitation/klasik";
+import { Invitation } from "@/components/invitation/invitation";
 import { loadPreviewInvitation } from "@/lib/invitation/load";
 import { requestOrigin } from "@/lib/invitation/origin";
 
@@ -16,7 +16,7 @@ export default async function PreviewPage({ params }: PageProps<"/dashboard/even
       </p>
       {/* Bingkai selebar HP, karena sebagian besar tamu membuka undangan dari WhatsApp. */}
       <div className="mx-auto w-full max-w-md overflow-hidden rounded-2xl border shadow-sm">
-        <KlasikInvitation data={data} invitationUrl={`${origin}/${data.event.slug}`} icsBaseUrl={`/${data.event.slug}/kalender`} preview />
+        <Invitation data={data} invitationUrl={`${origin}/${data.event.slug}`} icsBaseUrl={`/${data.event.slug}/kalender`} preview />
       </div>
     </div>
   );

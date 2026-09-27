@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { KlasikInvitation } from "@/components/invitation/klasik";
+import { Invitation } from "@/components/invitation/invitation";
 import { coupleNames } from "@/lib/invitation/content";
 import { loadPublicInvitation } from "@/lib/invitation/load";
 import { requestOrigin } from "@/lib/invitation/origin";
@@ -20,5 +20,5 @@ export default async function PersonalInvitationPage({ params }: PageProps<"/[sl
   if (!data) notFound();
 
   const origin = await requestOrigin();
-  return <KlasikInvitation data={data} invitationUrl={`${origin}/${slug}/to/${guestSlug}`} icsBaseUrl={`/${slug}/kalender`} />;
+  return <Invitation data={data} invitationUrl={`${origin}/${slug}/to/${guestSlug}`} icsBaseUrl={`/${slug}/kalender`} />;
 }
