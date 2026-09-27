@@ -1,0 +1,285 @@
+import { Cormorant_Garamond } from "next/font/google";
+import Link from "next/link";
+import { Countdown } from "@/components/invitation/countdown";
+import { CopyText } from "@/components/invitation/copy-text";
+import { MarkOpened } from "@/components/invitation/mark-opened";
+import { RsvpForm } from "@/components/invitation/rsvp-form";
+import { QrCode } from "@/components/qr-code";
+import { TIMEZONE_LABELS, coupleNames, formatDate, formatTime, type EventTimezone, type Person } from "@/lib/invitation/content";
+import { googleCalendarUrl, mapsUrl, wazeUrl } from "@/lib/invitation/links";
+import type { InvitationData } from "@/lib/invitation/load";
+import { cn } from "@/lib/utils";
+
+// Serif kontras tinggi bernuansa undangan cetak; hanya untuk nama dan judul, teks isi tetap Inter agar nyaman dibaca di HP.
+const display = Cormorant_Garamond({ subsets: ["latin"], weight: ["500", "600"], style: ["normal", "italic"], variable: "--font-cormorant" });
+
+const GENERAL_MAX_PAX = 5;
+
+const pillLink =
+  "inline-flex min-h-11 items-center justify-center rounded-full border border-(--inv-field) px-4 text-sm font-medium transition-colors hover:bg-(--inv-band) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--inv-text)";
+
+export function KlasikInvitation({
+  data,
+  invitationUrl,
+  icsBaseUrl,
+  preview = false,
+}: {
+  data: InvitationData;
+  invitationUrl: string;
+  icsBaseUrl: string;
+  preview?: boolean;
+}) {
+  const { event, sessions, guest, wishes } = data;
+  const { content, gifts, timezone } = event;
+  const [first, second] = coupleNames(content);
+  const tz = TIMEZONE_LABELS[timezone as EventTimezone] ?? "";
+  const mainSession = sessions[0];
+  // Tombol kamera muncul pada tanggal sesi mana pun (zona waktu event), hanya untuk paket berkamera (PRD §5.3).
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date());
+  const eventDay = sessions.some((s) => new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date(s.starts_at)) === today);
+  const experience = event.package === "complete" || event.package === "luxury";
+  const cameraOpen = experience && eventDay && !preview;
+
+  return (
+    <div className={cn(display.variable, "theme-klasik min-h-dvh bg-(--inv-bg) text-(--inv-text)")}>
+      {preview && (
+        <p className="sticky top-0 z-10 bg-(--inv-band) px-4 py-2 text-center text-sm font-medium">Pratinjau. Undangan belum dipublikasikan.</p>
+      )}
+      {guest && !preview && <MarkOpened slug={event.slug} personalSlug={guest.personalSlug} />}
+
+      <header className="flex min-h-dvh flex-col items-center justify-center gap-6 px-6 py-16 text-center">
+        <p className="font-display text-xl italic text-(--inv-accent)">Undangan Pernikahan</p>
+        <h1 className="font-display text-5xl leading-tight font-semibold [overflow-wrap:anywhere] sm:text-6xl">
+          {first.nickname}
+          <span className="mx-3 italic text-(--inv-accent)">&amp;</span>
+          {second.nickname}
+        </h1>
+        <Ornament />
+        {mainSession && <p className="text-base">{formatDate(mainSession.starts_at, timezone)}</p>}
+        {guest && (
+          <div className="mt-6 flex flex-col gap-1">
+            <p className="text-sm text-(--inv-muted)">Kepada Yth.</p>
+            <p className="font-display text-3xl font-semibold [overflow-wrap:anywhere]">{guest.name}</p>
+            <p className="mt-1 max-w-xs text-xs text-(--inv-muted)">Mohon maaf bila ada kesalahan penulisan nama atau gelar.</p>
+          </div>
+        )}
+        <a
+          href="#isi"
+          className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-(--inv-button) px-8 text-sm font-semibold transition-colors hover:bg-(--inv-button-hover) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--inv-text)"
+        >
+          Buka undangan
+        </a>
+      </header>
+
+      <main id="isi" className="mx-auto flex max-w-lg flex-col gap-20 px-6 pb-16">
+        <section className="flex flex-col items-center gap-6 pt-8 text-center">
+          <p className="leading-relaxed whitespace-pre-line">{content.texts.opening}</p>
+          {content.texts.quote && (
+            <figure className="flex flex-col gap-2 border-y border-(--inv-line) py-6">
+              <blockquote className="font-display text-2xl leading-snug italic whitespace-pre-line">{content.texts.quote}</blockquote>
+              {content.texts.quoteSource && <figcaption className="text-sm text-(--inv-muted)">{content.texts.quoteSource}</figcaption>}
+            </figure>
+          )}
+        </section>
+
+        <section aria-labelledby="mempelai" className="flex flex-col items-center gap-8 text-center">
+          <h2 id="mempelai" className="sr-only">
+            Mempelai
+          </h2>
+          <Profile person={first} role={content.couple.order === "bride-first" ? "Putri" : "Putra"} />
+          <p className="font-display text-5xl text-(--inv-accent) italic" aria-hidden>
+            &amp;
+          </p>
+          <Profile person={second} role={content.couple.order === "bride-first" ? "Putra" : "Putri"} />
+        </section>
+
+        {mainSession && (
+          <section aria-label="Hitung mundur" className="flex flex-col items-center gap-4 text-center">
+            <Countdown startsAt={mainSession.starts_at} endsAt={sessions[sessions.length - 1].ends_at} />
+          </section>
+        )}
+
+        {cameraOpen && (
+          <section aria-labelledby="kamera" className="flex flex-col items-center gap-4 rounded-2xl border border-(--inv-line) bg-(--inv-card) px-5 py-8 text-center">
+            <h2 id="kamera" className="font-display text-3xl font-semibold">
+              Kamera Tamu
+            </h2>
+            <p className="text-(--inv-muted)">Abadikan momen hari ini dari sudut pandangmu. Fotonya tampil di layar acara.</p>
+            <a
+              href={`/${event.slug}/kamera${guest ? `?tamu=${encodeURIComponent(guest.personalSlug)}` : ""}`}
+              className="inline-flex min-h-11 items-center justify-center rounded-full bg-(--inv-button) px-8 text-sm font-semibold transition-colors hover:bg-(--inv-button-hover) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--inv-text)"
+            >
+              Buka kamera
+            </a>
+          </section>
+        )}
+
+        {experience && guest && !preview && (
+          <section aria-labelledby="tiket" className="flex flex-col items-center gap-4 rounded-2xl border border-(--inv-line) bg-(--inv-card) px-5 py-8 text-center">
+            <h2 id="tiket" className="font-display text-3xl font-semibold">
+              QR Check-in
+            </h2>
+            <p className="text-(--inv-muted)">Tunjukkan QR ini ke penerima tamu saat tiba, agar kehadiranmu tercatat tanpa antre menulis buku tamu.</p>
+            <QrCode value={guest.qrToken} label={`QR check-in untuk ${guest.name}`} className="w-56 max-w-full rounded-lg" />
+            {guest.tableNumber && <p className="font-semibold">Meja {guest.tableNumber}</p>}
+          </section>
+        )}
+
+        <section aria-labelledby="acara" className="flex flex-col gap-6">
+          <SectionTitle id="acara">Rangkaian Acara</SectionTitle>
+          {sessions.map((session) => (
+            <article key={session.id} className="flex flex-col items-center gap-3 rounded-2xl border border-(--inv-line) bg-(--inv-card) px-5 py-8 text-center">
+              <h3 className="font-display text-3xl font-semibold">{session.name}</h3>
+              <p>{formatDate(session.starts_at, timezone)}</p>
+              <p className="text-(--inv-muted)">
+                Pukul {formatTime(session.starts_at, timezone)} sampai {formatTime(session.ends_at, timezone)} {tz}
+              </p>
+              {(session.venue_name || session.venue_address) && (
+                <div className="flex flex-col gap-1">
+                  {session.venue_name && <p className="font-semibold">{session.venue_name}</p>}
+                  {session.venue_address && <p className="text-sm text-(--inv-muted)">{session.venue_address}</p>}
+                </div>
+              )}
+              <div className="mt-2 flex flex-wrap justify-center gap-2">
+                {(session.venue_name || session.venue_address) && (
+                  <>
+                    <a href={mapsUrl(session)} target="_blank" rel="noopener noreferrer" className={pillLink}>
+                      Google Maps
+                    </a>
+                    <a href={wazeUrl(session)} target="_blank" rel="noopener noreferrer" className={pillLink}>
+                      Waze
+                    </a>
+                  </>
+                )}
+                <a href={googleCalendarUrl(session, event.title, invitationUrl)} target="_blank" rel="noopener noreferrer" className={pillLink}>
+                  Google Calendar
+                </a>
+                <a href={`${icsBaseUrl}/${session.id}`} download className={pillLink}>
+                  Kalender lain (.ics)
+                </a>
+              </div>
+            </article>
+          ))}
+        </section>
+
+        <section aria-labelledby="rsvp" className="flex flex-col gap-6">
+          <SectionTitle id="rsvp">Konfirmasi Kehadiran</SectionTitle>
+          <div className="rounded-2xl border border-(--inv-line) bg-(--inv-card) px-5 py-8">
+            {data.rsvpOpen ? (
+              <RsvpForm
+                slug={event.slug}
+                personalSlug={guest?.personalSlug ?? null}
+                guest={guest}
+                generalMaxPax={GENERAL_MAX_PAX}
+                preview={preview}
+              />
+            ) : (
+              <p className="text-center text-(--inv-muted)">Konfirmasi kehadiran sudah ditutup.</p>
+            )}
+          </div>
+        </section>
+
+        <section aria-labelledby="ucapan" className="flex flex-col gap-6">
+          <SectionTitle id="ucapan">Ucapan &amp; Doa</SectionTitle>
+          {wishes.length === 0 ? (
+            <p className="text-center text-(--inv-muted)">Belum ada ucapan. Tulis doa kamu lewat form konfirmasi di atas.</p>
+          ) : (
+            <ul className="flex max-h-[32rem] flex-col gap-3 overflow-y-auto">
+              {wishes.map((wish) => (
+                <li key={wish.id} className="rounded-xl border border-(--inv-line) bg-(--inv-card) px-4 py-3">
+                  <p className="font-semibold [overflow-wrap:anywhere]">{wish.author_name}</p>
+                  <p className="mt-1 whitespace-pre-line [overflow-wrap:anywhere]">{wish.message}</p>
+                  <p className="mt-2 text-xs text-(--inv-muted)">
+                    {new Intl.DateTimeFormat("id-ID", { day: "numeric", month: "long", year: "numeric", timeZone: timezone }).format(new Date(wish.created_at))}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        {(gifts.accounts.length > 0 || gifts.address) && (
+          <section aria-labelledby="amplop" className="flex flex-col gap-6 text-center">
+            <SectionTitle id="amplop">Amplop Digital</SectionTitle>
+            <p className="text-(--inv-muted)">Doa restu kamu sudah lebih dari cukup. Jika ingin memberi tanda kasih, bisa melalui:</p>
+            {gifts.accounts.map((account) => (
+              <div key={`${account.bank}-${account.number}`} className="flex flex-col items-center gap-2 rounded-2xl border border-(--inv-line) bg-(--inv-card) px-5 py-6">
+                <p className="font-semibold">{account.bank}</p>
+                <p className="font-display text-2xl font-semibold tracking-wide tabular-nums">{account.number}</p>
+                <p className="text-sm text-(--inv-muted)">a.n. {account.holder}</p>
+                <CopyText text={account.number} label="Salin nomor" />
+              </div>
+            ))}
+            {gifts.address && (
+              <div className="flex flex-col items-center gap-2 rounded-2xl border border-(--inv-line) bg-(--inv-card) px-5 py-6">
+                <p className="font-semibold">Kirim kado</p>
+                <p className="text-sm whitespace-pre-line">{gifts.address}</p>
+                <CopyText text={gifts.address} label="Salin alamat" />
+              </div>
+            )}
+          </section>
+        )}
+
+        <section className="flex flex-col items-center gap-6 text-center">
+          <Ornament />
+          {content.texts.closing && <p className="leading-relaxed whitespace-pre-line">{content.texts.closing}</p>}
+          <p className="font-display text-4xl font-semibold">
+            {first.nickname} <span className="italic text-(--inv-accent)">&amp;</span> {second.nickname}
+          </p>
+        </section>
+      </main>
+
+      <footer className="border-t border-(--inv-line) px-6 py-6 text-center text-sm text-(--inv-muted)">
+        Dibuat dengan{" "}
+        <Link href="/?ref=undangan" className="font-medium text-(--inv-accent) underline underline-offset-4">
+          MomenKita
+        </Link>
+      </footer>
+    </div>
+  );
+}
+
+function Ornament() {
+  return (
+    <div className="flex items-center gap-3 text-(--inv-ornament)" aria-hidden>
+      <span className="h-px w-16 bg-current" />
+      <span>✦</span>
+      <span className="h-px w-16 bg-current" />
+    </div>
+  );
+}
+
+function SectionTitle({ id, children }: { id: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <h2 id={id} className="font-display text-center text-4xl font-semibold">
+        {children}
+      </h2>
+      <Ornament />
+    </div>
+  );
+}
+
+function Profile({ person, role }: { person: Person; role: "Putra" | "Putri" }) {
+  const parents = [person.father, person.mother].filter(Boolean).join(" & ");
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <p className="font-display text-4xl font-semibold [overflow-wrap:anywhere]">{person.fullName || person.nickname}</p>
+      {parents && (
+        <p className="text-(--inv-muted)">
+          {role} dari {parents}
+        </p>
+      )}
+      {person.instagram && (
+        <a
+          href={`https://instagram.com/${encodeURIComponent(person.instagram)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex min-h-11 items-center text-sm font-medium text-(--inv-accent) underline underline-offset-4"
+        >
+          @{person.instagram}
+        </a>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,7 @@
+# Rahasia dan hasil build lokal tidak ikut ter-upload saat deploy lewat Vercel CLI.
+.env*
+!.env.example
+.next
+node_modules
+supabase/.temp
+supabase/.branches
