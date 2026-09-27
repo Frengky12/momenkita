@@ -9,6 +9,7 @@ export default async function DashboardLayout({ children }: LayoutProps<"/dashbo
   const supabase = await createClient();
   const { data } = await supabase.auth.getClaims();
   if (!data?.claims || data.claims.is_anonymous) redirect("/login");
+  const { data: isAdmin } = await supabase.rpc("is_admin");
 
   return (
     <div className="flex flex-1 flex-col">
@@ -19,6 +20,11 @@ export default async function DashboardLayout({ children }: LayoutProps<"/dashbo
         </Link>
         <div className="flex min-w-0 items-center gap-2">
           <span className="hidden truncate text-sm text-muted-foreground sm:inline">{data.claims.email}</span>
+          {isAdmin && (
+            <Button asChild variant="ghost" className="h-11">
+              <Link href="/admin">Super Admin</Link>
+            </Button>
+          )}
           <form action={signOut}>
             <Button type="submit" variant="ghost" className="h-11">
               Keluar

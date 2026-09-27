@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { publicEnv } from "@/lib/env";
+import { safeNextPath } from "@/lib/safe-next";
 
 // Me-refresh sesi host di setiap navigasi dashboard, lalu menulis cookie baru ke request dan response.
 export async function updateSession(request: NextRequest) {
@@ -26,11 +27,11 @@ export async function updateSession(request: NextRequest) {
   const isHost = Boolean(data?.claims) && data?.claims.is_anonymous !== true;
   const { pathname } = request.nextUrl;
 
-  if (!isHost && pathname.startsWith("/dashboard")) {
+  if (!isHost && (pathname.startsWith("/dashboard") || pathname.startsWith("/admin"))) {
     return redirectWithCookies(request, response, `/login?next=${encodeURIComponent(pathname)}`);
   }
   if (isHost && pathname === "/login") {
-    return redirectWithCookies(request, response, "/dashboard");
+    return redirectWithCookies(request, response, safeNextPath(request.nextUrl.searchParams.get("next")));
   }
   return response;
 }

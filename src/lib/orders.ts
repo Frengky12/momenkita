@@ -46,18 +46,18 @@ export async function reconcileOrder(orderId: string): Promise<OrderOutcome> {
   return "pending";
 }
 
-// Setelah paket/upgrade lunas, pesanan paket lain yang masih pending untuk event yang sama tidak berlaku lagi.
-// Dibatalkan di Midtrans agar QR/VA lamanya tidak bisa dibayar (mencegah pembayaran ganda). Add-on tidak disentuh.
 async function cancelSupersededOrders(admin: AdminClient, paidOrderId: string) {
   const { data: paid } = await admin.from("orders").select("event_id").eq("id", paidOrderId).maybeSingle();
-  if (!paid?.event_id) return;
+  if (paid?.event_id) await cancelPendingPackageOrders(paid.event_id, paidOrderId);
+}
 
-  const { data: pending } = await admin
-    .from("orders")
-    .select("id, catalog_items(item_type)")
-    .eq("event_id", paid.event_id)
-    .eq("status", "pending")
-    .neq("id", paidOrderId);
+// Setelah paket/upgrade lunas atau diaktifkan manual oleh admin, pesanan paket lain yang masih pending untuk event yang sama
+// tidak berlaku lagi. Dibatalkan di Midtrans agar QR/VA lamanya tidak bisa dibayar (mencegah pembayaran ganda). Add-on tidak disentuh.
+export async function cancelPendingPackageOrders(eventId: string, exceptOrderId?: string) {
+  const admin = createAdminClient();
+  let query = admin.from("orders").select("id, catalog_items(item_type)").eq("event_id", eventId).eq("status", "pending");
+  if (exceptOrderId) query = query.neq("id", exceptOrderId);
+  const { data: pending } = await query;
 
   for (const order of pending ?? []) {
     if (!["event_package", "upgrade"].includes(order.catalog_items?.item_type ?? "")) continue;

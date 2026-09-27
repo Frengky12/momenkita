@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { guestTokenFromRequest, verifyGuestToken } from "@/lib/guest-token";
 import { deleteObjects, headObject } from "@/lib/r2";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { DISPLAY_TYPES, UUID_PATTERN, VARIANTS, isAllowedFile, jsonError, loadGuestContext, photoKey, type DisplayType, type Variant } from "@/lib/uploads";
+import { DISPLAY_TYPES, UUID_PATTERN, VARIANTS, isAllowedFile, jsonError, loadGuestContext, photoKey, recordUploadRejection, type DisplayType, type Variant } from "@/lib/uploads";
+import type { GuestToken } from "@/lib/guest-token";
 
 type PhotoRow = { id: string; guest_session_id: string; status: string; visible_after: string | null; over_quota: boolean; key_original: string | null };
 
@@ -13,7 +14,12 @@ const PHOTO_COLUMNS = "id, guest_session_id, status, visible_after, over_quota, 
 export async function POST(request: Request) {
   const token = verifyGuestToken(guestTokenFromRequest(request));
   if (!token) return jsonError("unauthorized", 401);
+  const response = await confirm(request, token);
+  await recordUploadRejection(response, token.eid, "confirm");
+  return response;
+}
 
+async function confirm(request: Request, token: GuestToken): Promise<Response> {
   const body = (await request.json().catch(() => null)) as Record<string, unknown> | null;
   const photoId = body?.photoId;
   const width = body?.width;
@@ -39,7 +45,7 @@ export async function POST(request: Request) {
     loadGuestContext(admin, token),
     admin.from("photos").select(PHOTO_COLUMNS).eq("id", photoId).maybeSingle(),
   ]);
-  if ("error" in context) return context.error;
+  if (!context.ok) return context.error;
   if (originalContentType && context.event.package !== "luxury") return jsonError("original_not_allowed", 400);
 
   const key = (variant: Variant, contentType: string = format) => photoKey(token.eid, token.sid, photoId, variant, contentType);

@@ -39,6 +39,81 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_actions: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json
+          event_id: string | null
+          id: string
+          order_id: string | null
+          organization_id: string | null
+          photo_id: string | null
+          reason: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          event_id?: string | null
+          id?: string
+          order_id?: string | null
+          organization_id?: string | null
+          photo_id?: string | null
+          reason: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          event_id?: string | null
+          id?: string
+          order_id?: string | null
+          organization_id?: string | null
+          photo_id?: string | null
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_actions_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_actions_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_actions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_actions_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_actions_photo_id_fkey"
+            columns: ["photo_id"]
+            isOneToOne: false
+            referencedRelation: "photos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       catalog_items: {
         Row: {
           code: string
@@ -918,6 +993,38 @@ export type Database = {
           },
         ]
       }
+      stage_heartbeats: {
+        Row: {
+          auth_user_id: string
+          cached_photos: number
+          event_id: string
+          last_seen_at: string
+          realtime_live: boolean
+        }
+        Insert: {
+          auth_user_id: string
+          cached_photos?: number
+          event_id: string
+          last_seen_at?: string
+          realtime_live: boolean
+        }
+        Update: {
+          auth_user_id?: string
+          cached_photos?: number
+          event_id?: string
+          last_seen_at?: string
+          realtime_live?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stage_heartbeats_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscriptions: {
         Row: {
           created_at: string
@@ -958,6 +1065,38 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      upload_errors: {
+        Row: {
+          code: string
+          created_at: string
+          event_id: string
+          id: number
+          stage: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          event_id: string
+          id?: never
+          stage: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          event_id?: string
+          id?: never
+          stage?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "upload_errors_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
             referencedColumns: ["id"]
           },
         ]
@@ -1012,6 +1151,61 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_activate_event: {
+        Args: { p_event_id: string; p_package: string; p_reason: string }
+        Returns: Json
+      }
+      admin_adjust_credit: {
+        Args: { p_delta: number; p_organization_id: string; p_reason: string }
+        Returns: Json
+      }
+      admin_dismiss_report: {
+        Args: { p_reason: string; p_report_id: string }
+        Returns: undefined
+      }
+      admin_record_refund: {
+        Args: { p_order_id: string; p_reason: string; p_revert_event?: boolean }
+        Returns: Json
+      }
+      admin_set_domain_status: {
+        Args: { p_domain_id: string; p_reason: string; p_status: string }
+        Returns: undefined
+      }
+      admin_takedown_photo: {
+        Args: { p_photo_id: string; p_reason: string }
+        Returns: Json
+      }
+      admin_today: {
+        Args: never
+        Returns: {
+          checked_in: number
+          event_id: string
+          invitations: number
+          moderation_mode: string
+          open_reports: number
+          package: string
+          pending: number
+          photos_today: number
+          sessions: Json
+          slug: string
+          stage_cached: number
+          stage_last_seen: string
+          stage_live: boolean
+          timezone: string
+          title: string
+          upload_errors_today: number
+        }[]
+      }
+      admin_upsert_domain: {
+        Args: {
+          p_domain: string
+          p_event_id: string
+          p_paid_by: string
+          p_reason: string
+          p_registered_until: string
+        }
+        Returns: string
+      }
       can_receive_event_channel: { Args: { p_topic: string }; Returns: boolean }
       can_view_profile: { Args: { p_profile_id: string }; Returns: boolean }
       check_gallery_passcode: {
@@ -1023,6 +1217,7 @@ export type Database = {
         Args: { p_pin: string; p_token: string }
         Returns: Json
       }
+      cleanup_ops_data: { Args: never; Returns: undefined }
       cleanup_staff_devices: { Args: never; Returns: number }
       create_staff_link: {
         Args: { p_event_id: string; p_label?: string; p_role: string }
@@ -1049,11 +1244,26 @@ export type Database = {
       is_org_member: { Args: { p_organization_id: string }; Returns: boolean }
       is_org_owner: { Args: { p_organization_id: string }; Returns: boolean }
       is_registered_user: { Args: never; Returns: boolean }
+      log_admin_action: {
+        Args: {
+          p_action: string
+          p_actor_id?: string
+          p_details?: Json
+          p_event_id?: string
+          p_order_id?: string
+          p_organization_id?: string
+          p_photo_id?: string
+          p_reason: string
+        }
+        Returns: string
+      }
       random_token: { Args: { p_length: number }; Returns: string }
+      require_admin: { Args: never; Returns: undefined }
       require_event_access: {
         Args: { p_event_id: string; p_roles: string[] }
         Returns: undefined
       }
+      resolve_custom_domain: { Args: { p_host: string }; Returns: string }
       set_gallery_passcode: {
         Args: { p_event_id: string; p_passcode: string }
         Returns: undefined
@@ -1141,6 +1351,14 @@ export type Database = {
       staff_set_blackout: {
         Args: { p_event_id: string; p_on: boolean }
         Returns: Json
+      }
+      staff_stage_heartbeat: {
+        Args: {
+          p_cached_photos: number
+          p_event_id: string
+          p_realtime_live: boolean
+        }
+        Returns: undefined
       }
       staff_wishes: {
         Args: { p_event_id: string; p_limit?: number }

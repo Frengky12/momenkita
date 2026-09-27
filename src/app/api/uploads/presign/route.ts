@@ -10,8 +10,10 @@ import {
   jsonError,
   loadGuestContext,
   photoKey,
+  recordUploadRejection,
   type Variant,
 } from "@/lib/uploads";
+import type { GuestToken } from "@/lib/guest-token";
 
 type FileRequest = { variant: Variant; contentType: string; size: number };
 
@@ -22,14 +24,19 @@ const EXPIRES_IN_SECONDS = 300;
 export async function POST(request: Request) {
   const token = verifyGuestToken(guestTokenFromRequest(request));
   if (!token) return jsonError("unauthorized", 401);
+  const response = await presign(request, token);
+  await recordUploadRejection(response, token.eid, "presign");
+  return response;
+}
 
+async function presign(request: Request, token: GuestToken): Promise<Response> {
   const body = (await request.json().catch(() => null)) as { photoId?: unknown; files?: unknown } | null;
   const files = parseFiles(body?.files);
   if (!files) return jsonError("invalid_files", 400);
 
   const admin = createAdminClient();
   const context = await loadGuestContext(admin, token);
-  if ("error" in context) return context.error;
+  if (!context.ok) return context.error;
 
   const variants = files.map((file) => file.variant);
   if (variants.includes("original") && context.event.package !== "luxury") return jsonError("original_not_allowed", 400);

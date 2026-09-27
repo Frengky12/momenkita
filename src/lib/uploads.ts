@@ -1,7 +1,7 @@
 import "server-only";
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import type { GuestToken } from "@/lib/guest-token";
-import type { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export { CONSENT_VERSION } from "@/lib/camera/consent";
 
@@ -52,6 +52,19 @@ export function jsonError(error: string, status: number) {
 
 type AdminClient = ReturnType<typeof createAdminClient>;
 
+// Penolakan server dicatat untuk "error rate upload" di monitor Super Admin (PRD §5.7).
+// Jeda 3 detik (too_fast) bukan kegagalan; penulisan berjalan setelah respons terkirim agar tamu tidak menunggu.
+export async function recordUploadRejection(response: Response, eventId: string, stage: "presign" | "confirm") {
+  if (response.status < 400) return;
+  const body = (await response.clone().json().catch(() => null)) as { error?: string } | null;
+  const code = body?.error ?? String(response.status);
+  if (code === "too_fast") return;
+  after(async () => {
+    const { error } = await createAdminClient().from("upload_errors").insert({ event_id: eventId, stage, code });
+    if (error) console.error(`upload_errors gagal dicatat: ${error.message}`);
+  });
+}
+
 // Sesi harus milik event di token, tidak diblokir, dan event masih menerima foto (aktif, paket Complete/Luxury).
 export async function loadGuestContext(admin: AdminClient, token: GuestToken) {
   // Dua query independen dijalankan bersamaan: jalur upload tamu sensitif terhadap latensi (PRD §8).
@@ -59,11 +72,11 @@ export async function loadGuestContext(admin: AdminClient, token: GuestToken) {
     admin.from("guest_sessions").select("id, event_id, is_blocked").eq("id", token.sid).eq("event_id", token.eid).maybeSingle(),
     admin.from("events").select("id, status, package").eq("id", token.eid).maybeSingle(),
   ]);
-  if (!session) return { error: jsonError("session_not_found", 401) } as const;
-  if (session.is_blocked) return { error: jsonError("session_blocked", 403) } as const;
+  if (!session) return { ok: false, error: jsonError("session_not_found", 401) } as const;
+  if (session.is_blocked) return { ok: false, error: jsonError("session_blocked", 403) } as const;
 
   if (!event || event.status !== "active" || (event.package !== "complete" && event.package !== "luxury")) {
-    return { error: jsonError("event_closed", 409) } as const;
+    return { ok: false, error: jsonError("event_closed", 409) } as const;
   }
-  return { session, event } as const;
+  return { ok: true, session, event } as const;
 }

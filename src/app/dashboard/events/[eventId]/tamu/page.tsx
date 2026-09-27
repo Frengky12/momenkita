@@ -1,9 +1,9 @@
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { CATEGORY_LABELS } from "@/lib/guests";
 import { coupleNames, parseContent } from "@/lib/invitation/content";
+import { invitationBase } from "@/lib/invitation/origin";
 import { createClient } from "@/lib/supabase/server";
 import { GuestForm, type GuestRow } from "./guest-form";
 import { GuestList } from "./guest-list";
@@ -24,8 +24,7 @@ export default async function GuestsPage({ params }: PageProps<"/dashboard/event
   ]);
   if (!event) notFound();
 
-  const h = await headers();
-  const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
+  const base = await invitationBase(supabase, event.id, event.slug);
   const list = (guests ?? []) as GuestRow[];
   const sessionList = sessions ?? [];
   const content = parseContent(event.theme_config);
@@ -120,7 +119,7 @@ export default async function GuestsPage({ params }: PageProps<"/dashboard/event
           eventId={event.id}
           guests={list}
           sessions={sessionList}
-          inviteBaseUrl={`${origin}/${event.slug}/to/`}
+          inviteBaseUrl={`${base}/to/`}
           whatsapp={event.published_at ? { template: content.texts.whatsapp, couple: `${first.nickname} & ${second.nickname}` } : null}
         />}
     </div>

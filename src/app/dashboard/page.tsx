@@ -18,9 +18,21 @@ const PACKAGE_LABEL: Record<string, string> = {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
+  // RLS memberi Super Admin akses baca ke semua event. Dashboard tetap hanya menampilkan event yang dikelola sendiri
+  // (pemilik, co-host, atau anggota organisasi), sama dengan is_event_manager.
+  const { data: claims } = await supabase.auth.getClaims();
+  const uid = claims?.claims.sub ?? "";
+  const [{ data: cohosted }, { data: memberships }] = await Promise.all([
+    supabase.from("event_cohosts").select("event_id").eq("profile_id", uid),
+    supabase.from("org_members").select("organization_id").eq("profile_id", uid),
+  ]);
+  const managed = [`owner_id.eq.${uid}`];
+  if (cohosted?.length) managed.push(`id.in.(${cohosted.map((c) => c.event_id).join(",")})`);
+  if (memberships?.length) managed.push(`organization_id.in.(${memberships.map((m) => m.organization_id).join(",")})`);
   const { data: events, error } = await supabase
     .from("events")
     .select("id, title, slug, status, package")
+    .or(managed.join(","))
     .order("created_at", { ascending: false });
 
   return (

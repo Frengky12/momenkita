@@ -349,6 +349,74 @@ check('cleanup removes only old anonymous devices without an active link', clean
 check('recent staff devices untouched', (await one('postgres', `select count(*)::int n from auth.users where id = any($1::uuid[])`, [[recDevice.id, modDevice.id, photoDevice.id]])).n === 3)
 await expectErr('authenticated cannot run cleanup', as(hostA, `select public.cleanup_staff_devices()`), /permission denied/)
 
+console.log('\n# super admin')
+await expectErr('host cannot open admin monitor', as(hostA, `select * from public.admin_today()`), /akses ditolak/)
+await expectErr('host cannot activate events', as(hostA, `select public.admin_activate_event($1, 'luxury', 'coba aktivasi')`, [ev.id]), /akses ditolak/)
+
+const pilot = await one(hostA, `insert into public.events (slug, title) values ('pilot-ev', 'Pilot') returning id`)
+const act = (await one(admin, `select public.admin_activate_event($1, 'complete', 'Acara pilot gratis') r`, [pilot.id])).r
+const pilotRow = await one('postgres', `select status, package, photo_quota from public.events where id = $1`, [pilot.id])
+check('admin activates draft event with catalog quota', act.ok && pilotRow.status === 'active' && pilotRow.package === 'complete' && pilotRow.photo_quota === 1000)
+await expectErr('activation cannot downgrade', as(admin, `select public.admin_activate_event($1, 'classic', 'turun paket')`, [pilot.id]), /naik paket/)
+await expectErr('reason is required', as(admin, `select public.admin_activate_event($1, 'luxury', 'x')`, [pilot.id]), /check constraint/)
+check('upgrade to luxury allowed', (await one(admin, `select public.admin_activate_event($1, 'luxury', 'Upgrade pilot ke Luxury') r`, [pilot.id])).r.ok)
+
+// Acara hari ini: sesi mulai sekarang, ada foto, kegagalan upload, check-in, laporan, dan detak layar panggung.
+await as('postgres', `update public.events set published_at = now() where id = $1`, [pilot.id])
+await as('postgres', `insert into public.event_sessions (event_id, name, starts_at, ends_at) values ($1, 'Resepsi', now(), now() + interval '3 hours')`, [pilot.id])
+const pilotGs = await one('service', `insert into public.guest_sessions (event_id, display_name, consent_version) values ($1, 'Rani', 'v1') returning id`, [pilot.id])
+const pilotPhoto = await one('service', `insert into public.photos (event_id, guest_session_id, key_display, key_thumb, width, height, bytes_display)
+  values ($1, $2, $3, $4, 10, 10, 10) returning id, status`, [pilot.id, pilotGs.id, `events/${pilot.id}/a.webp`, `events/${pilot.id}/b.webp`])
+await as('service', `insert into public.upload_errors (event_id, stage, code) values ($1, 'confirm', 'upload_missing')`, [pilot.id])
+await as('service', `insert into public.photo_reports (event_id, photo_id, reason, reporter_key) values ($1, $2, 'privacy', 'ip-9')`, [pilot.id, pilotPhoto.id])
+await as(hostA, `select public.staff_stage_heartbeat($1, true, 12)`, [pilot.id])
+await expectErr('receptionist cannot send stage heartbeat', as(recDevice, `select public.staff_stage_heartbeat($1, true, 1)`, [ev.id]), /akses ditolak/)
+const today = await as(admin, `select * from public.admin_today()`)
+const row = today.find((t) => t.event_id === pilot.id)
+check('monitor lists today\'s event with metrics', row && row.photos_today === 1 && row.pending === 1 && row.upload_errors_today === 1
+  && row.open_reports === 1 && row.stage_live === true && row.stage_cached === 12 && row.sessions.length === 1, JSON.stringify(row))
+check('events without a session today are not listed', !today.some((t) => t.event_id === ev.id))
+
+const takedown = (await one(admin, `select public.admin_takedown_photo($1, 'Laporan privasi tamu') r`, [pilotPhoto.id])).r
+const gone = await one('postgres', `select status from public.photos where id = $1`, [pilotPhoto.id])
+check('takedown deletes photo, returns R2 keys, resolves reports', takedown.ok && gone.status === 'deleted' && takedown.keys.length === 2
+  && (await one('postgres', `select count(*)::int n from public.photo_reports where photo_id = $1 and resolved_at is null`, [pilotPhoto.id])).n === 0)
+
+const refundOrder = await one('service', `insert into public.orders (profile_id, event_id, item_code, amount_idr) values ($1, $2, 'addon_photos_500', 79000) returning id`, [hostA.id, pilot.id])
+await expectErr('pending order cannot be refunded', as(admin, `select public.admin_record_refund($1, 'Salah bayar')`, [refundOrder.id]), /hanya order lunas/)
+await as('service', `select public.fulfill_order($1, 'trx-refund', 79000)`, [refundOrder.id])
+check('admin records refund', (await one(admin, `select public.admin_record_refund($1, 'Host membatalkan add-on') r`, [refundOrder.id])).r.ok
+  && (await one('postgres', `select status from public.orders where id = $1`, [refundOrder.id])).status === 'refunded')
+const revertEv = await one(hostA, `insert into public.events (slug, title) values ('refund-ev', 'Refund') returning id`)
+const revertOrder = await one('service', `insert into public.orders (profile_id, event_id, item_code, amount_idr) values ($1, $2, 'classic', 149000) returning id`, [hostA.id, revertEv.id])
+await as('service', `select public.fulfill_order($1, 'trx-revert', 149000)`, [revertOrder.id])
+await as(admin, `select public.admin_record_refund($1, 'Refund sebelum publikasi', true)`, [revertOrder.id])
+const reverted = await one('postgres', `select status, package, published_at from public.events where id = $1`, [revertEv.id])
+check('refund with revert returns event to draft', reverted.status === 'draft' && reverted.package === null && reverted.published_at === null)
+
+const adj = (await one(admin, `select public.admin_adjust_credit($1, 5, 'Bonus pilot WO') r`, [org.id])).r
+check('credit adjustment recorded in ledger', adj.balance === 5
+  && (await one('postgres', `select count(*)::int n from public.credit_ledger where organization_id = $1 and reason = 'adjustment' and actor_id = $2`, [org.id, admin.id])).n === 1)
+await expectErr('zero adjustment rejected', as(admin, `select public.admin_adjust_credit($1, 0, 'tidak ada')`, [org.id]), /tidak boleh 0/)
+
+await expectErr('custom domain only for Luxury', as(admin, `select public.admin_upsert_domain('budi-ani.com', $1, 'platform', '2027-09-27', 'Domain paket')`, [ev.id]), /Luxury/)
+const domainId = (await one(admin, `select public.admin_upsert_domain('Pilot-Wedding.com', $1, 'platform', '2027-09-27', 'Domain paket Luxury') id`, [pilot.id])).id
+check('pending domain does not resolve', (await one('anon', `select public.resolve_custom_domain('pilot-wedding.com') s`)).s === null)
+await as(admin, `select public.admin_set_domain_status($1, 'active', 'DNS sudah mengarah ke Vercel')`, [domainId])
+check('active domain resolves to event slug (host lowercased, port ignored)', (await one('anon', `select public.resolve_custom_domain('PILOT-wedding.com:443') s`)).s === 'pilot-ev')
+check('audit log has every successful admin action with actor (rejected ones are not logged)', (await as(admin, `select action from public.admin_actions where actor_id = $1`, [admin.id])).length === 8)
+check('hosts cannot read audit log', (await as(hostA, `select * from public.admin_actions`)).length === 0)
+const dismissPhoto = await one('service', `insert into public.photos (event_id, guest_session_id, key_display, key_thumb, width, height, bytes_display)
+  values ($1, $2, $3, $4, 10, 10, 10) returning id`, [pilot.id, pilotGs.id, `events/${pilot.id}/c.webp`, `events/${pilot.id}/d.webp`])
+const dismissReport = await one('service', `insert into public.photo_reports (event_id, photo_id, reason, reporter_key) values ($1, $2, 'other', 'ip-8') returning id`, [pilot.id, dismissPhoto.id])
+await expectErr('host cannot dismiss via admin RPC', as(hostA, `select public.admin_dismiss_report($1, 'bukan masalah')`, [dismissReport.id]), /akses ditolak/)
+await as(admin, `select public.admin_dismiss_report($1, 'Foto tidak melanggar')`, [dismissReport.id])
+check('admin dismisses report, photo stays', (await one('postgres', `select resolved_at from public.photo_reports where id = $1`, [dismissReport.id])).resolved_at !== null
+  && (await one('postgres', `select status from public.photos where id = $1`, [dismissPhoto.id])).status === 'pending')
+await expectErr('dismissing twice fails', as(admin, `select public.admin_dismiss_report($1, 'Foto tidak melanggar')`, [dismissReport.id]), /sudah ditutup/)
+await as('service', `select public.cleanup_ops_data()`)
+check('cleanup keeps recent ops data', (await one('postgres', `select count(*)::int n from public.upload_errors`)).n === 1)
+
 console.log('\n# revocation')
 await as(hostA, `update public.staff_links set revoked_at = now() where id = $1`, [links.receptionist.id])
 await expectErr('revoked link loses access', as(recDevice, `select * from public.staff_guest_list($1)`, [ev.id]), /akses ditolak/)

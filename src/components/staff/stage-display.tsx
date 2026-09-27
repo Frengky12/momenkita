@@ -25,6 +25,7 @@ const MIN_DWELL_MS = 1000;
 // Saat foto baru berdatangan, tiap foto baru tetap tampil minimal 3 detik sebelum digeser foto baru berikutnya.
 const FRESH_MIN_DWELL_MS = 3000;
 const RESYNC_MS = 60_000;
+const HEARTBEAT_MS = 60_000;
 const PANEL_IDLE_MS = 3000;
 
 function readSettings(eventId: string): Settings {
@@ -108,6 +109,17 @@ function StageDisplay({ access }: { access: StaffAccess }) {
     let dueAt = Infinity;
     let decoding = 0;
     let everLive = false;
+    let realtimeLive = false;
+
+    // Detak ke server untuk monitor Super Admin (PRD §5.7: status koneksi panggung). Gagal saat offline itu wajar.
+    function heartbeat() {
+      client
+        .rpc("staff_stage_heartbeat", { p_event_id: event.id, p_realtime_live: realtimeLive, p_cached_photos: pool.cachedCount() })
+        .then(
+          () => {},
+          () => {},
+        );
+    }
 
     function schedule(ms: number) {
       clearTimeout(timer);
@@ -271,6 +283,7 @@ function StageDisplay({ access }: { access: StaffAccess }) {
 
     const boot = setTimeout(async () => {
       await sync(true);
+      heartbeat();
       advance();
     }, 0);
     const unsubscribe = subscribeEvent(
@@ -301,11 +314,16 @@ function StageDisplay({ access }: { access: StaffAccess }) {
       },
       (isLive) => {
         setLive(isLive);
+        if (isLive !== realtimeLive) {
+          realtimeLive = isLive;
+          heartbeat();
+        }
         if (isLive && everLive) sync(false);
         if (isLive) everLive = true;
       },
     );
     const resync = setInterval(() => sync(false), RESYNC_MS);
+    const beat = setInterval(heartbeat, HEARTBEAT_MS);
     // Mode jeda: foto baru boleh tayang setelah visible_after, jadi diperiksa berkala.
     const watcher = setInterval(maybeInterrupt, 500);
     const onOnline = () => sync(false);
@@ -316,6 +334,7 @@ function StageDisplay({ access }: { access: StaffAccess }) {
       clearTimeout(boot);
       clearTimeout(timer);
       clearInterval(resync);
+      clearInterval(beat);
       clearInterval(watcher);
       window.removeEventListener("online", onOnline);
       unsubscribe();

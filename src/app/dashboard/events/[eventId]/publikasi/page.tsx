@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { CopyButton } from "@/components/dashboard/copy-button";
 import { SectionForm } from "@/components/dashboard/section-form";
-import { requestOrigin } from "@/lib/invitation/origin";
+import { invitationBase } from "@/lib/invitation/origin";
 import { createClient } from "@/lib/supabase/server";
 import { publishEvent, startCheckout } from "./actions";
 import { OrderStatus } from "./order-status";
@@ -47,7 +47,7 @@ export default async function PublishPage({ params, searchParams }: PageProps<"/
   const returnedOrder =
     orderList.find((o) => o.id === returnedOrderId) ??
     orderList.find((o) => o.status === "pending" && offers.some((item) => item.code === o.item_code));
-  const publicUrl = `${await requestOrigin()}/${event.slug}`;
+  const publicUrl = await invitationBase(supabase, event.id, event.slug);
 
   return (
     <div className="flex flex-col gap-6">

@@ -1,6 +1,6 @@
 # QA MVP MomenKita
 
-Status Kriteria Penerimaan (KP) dan persyaratan non-fungsional PRD v1.4.0 di akhir Minggu 6 (27 Sep 2026).
+Status Kriteria Penerimaan (KP) dan persyaratan non-fungsional PRD v1.4.0 di akhir Minggu 7 (27 Sep 2026).
 Uji dijalankan terhadap project Supabase dev, bucket R2, dan Midtrans Sandbox, di mesin pengembangan dan di deploy
 Vercel `https://momenkita-hazel.vercel.app` (region sin1, paket Hobby).
 
@@ -10,10 +10,11 @@ Vercel `https://momenkita-hazel.vercel.app` (region sin1, paket Hobby).
 
 | Perintah | Isi | Hasil |
 | :--- | :--- | :--- |
-| `npm run test:db` | Migrasi di PGlite, RLS, grant, trigger, RPC | 146/146 |
+| `npm run test:db` | Migrasi di PGlite, RLS, grant, trigger, RPC (termasuk RPC `admin_*`) | 170/170 |
 | `npm run test:upload` | Sesi tamu, presign, PUT R2, konfirmasi, hapus | 33/33 |
 | `npm run test:staff` | Link staf + PIN, API foto staf, Realtime, moderasi, check-in, pencabutan | 30/30 |
 | `npm run test:gallery` | Akses galeri, passcode, laporan, manifest ZIP per peran, integritas ZIP | 28/28 |
+| `npm run test:admin` | Gerbang `/admin` per peran, monitor hari ini, pencatatan upload ditolak, detak panggung, custom domain lewat proxy | 19/19 |
 | `npm run test:load` | Load test skala kecil (lihat bagian Kapasitas) | 0 error |
 
 `test:upload`, `test:staff`, dan `test:gallery` juga lolos penuh terhadap deploy produksi (`BASE=https://momenkita-hazel.vercel.app`).
@@ -70,6 +71,18 @@ Vercel `https://momenkita-hazel.vercel.app` (region sin1, paket Hobby).
 | Unduh 1.000 foto (± 400 MB) di Chrome desktop tanpa error memori | ⚠️ | ZIP streaming 391 MB: puncak memori naik 80 MB (tidak menumpuk). Jalur tulis-ke-disk dan jalur cadangan per 300 foto diuji di browser dengan foto nyata. Uji 1.000 foto di Chrome dengan dialog simpan sungguhan belum. |
 | Galeri ber-passcode tidak bisa diakses; URL foto butuh signed URL | ✅ | `test:gallery`: tanpa passcode → 403, cookie lama batal saat passcode diganti, objek R2 tanpa tanda tangan ditolak. |
 
+### §5.7 Super Admin
+
+| Kebutuhan | Status | Bukti |
+| :--- | :---: | :--- |
+| Pencarian event, pengguna, order | ✅ | `/admin/cari`: nama/slug event, email/nama pengguna, ID transaksi Midtrans, atau UUID. Tanpa kata kunci menampilkan order terbaru. Diuji di browser. |
+| Aktivasi manual, refund, penyesuaian kredit, wajib alasan dan tercatat | ✅ | Diuji di browser: refund + kembalikan ke draf, aktivasi Luxury (kuota 10.000), kredit +5 (ledger + log). Alasan < 5 karakter ditolak form dan database. Aktivasi manual ikut membatalkan order paket yang masih pending di Midtrans. |
+| Cek ulang pembayaran ke Midtrans | ✅ | Order pending tanpa transaksi → "Midtrans masih menunggu pembayaran", tercatat di log event. |
+| Takedown dari laporan | ✅ | Diuji di browser: foto `deleted`, file display + thumb di R2 404, laporan tertutup. "Abaikan laporan" menutup semua laporan foto itu tanpa menurunkan foto. |
+| Monitor acara hari ini | ✅ | `test:admin`: foto, pending, check-in, laporan, upload ditolak (dicatat setelah respons, tanpa menambah latensi), detak panggung (realtime + jumlah cache). Panggung tanpa detak > 2 menit tampil "Terputus". |
+| Custom domain Luxury manual | ✅ | `test:admin`: domain aktif membuka undangan, `/to/<tamu>`, dan `/galeri`; host tak dikenal tidak diarahkan; domain nonaktif berhenti resolve. Tautan WA dan link publikasi host memakai domain aktif. Uji dengan domain sungguhan di Vercel ⏳. |
+| Area admin tertutup untuk non-admin | ✅ | Tanpa sesi → login. Host → 404 tanpa isi halaman di ketujuh route (diuji dengan cookie sesi asli; uji mutasi membuktikan tes menangkap kebocoran). |
+
 ## Persyaratan non-fungsional (§8)
 
 | # | Target | Status | Catatan |
@@ -82,7 +95,7 @@ Vercel `https://momenkita-hazel.vercel.app` (region sin1, paket Hobby).
 | 6 | Kompatibilitas perangkat | ⏳ | Matriks uji: Android Chrome, iOS Safari 16+, in-app WhatsApp/Instagram, Chrome desktop panggung. |
 | 7 | Keamanan | ⚠️ | Token 128-bit, RLS semua tabel, signed URL ber-TTL, rate limit presign/RSVP/passcode/laporan, link staf kedaluwarsa H+1 ✅. Security review menyeluruh ⏳. |
 | 8 | Backup harian | ⏳ | Bawaan Supabase Pro; project dev masih paket gratis. |
-| 9 | Observability | ⏳ | Error tracking dan dashboard "Acara Hari Ini" belum dipasang. |
+| 9 | Observability | ⚠️ | Monitor "Acara hari ini" di `/admin` ✅. Error tracking (Sentry atau sejenis) ⏳. |
 | 10 | Bahasa Indonesia | ✅ | |
 
 ### Load test skala kecil
@@ -104,7 +117,8 @@ Di Vercel, server berada satu region dengan Supabase (ap-southeast-1), sehingga 
 | :--- | :--- |
 | 12 foreign key tanpa indeks | Diperbaiki (migrasi `20260927000500`). |
 | Policy permissive ganda (3 tabel) | Digabung per aksi; `is_admin()` dihitung sekali per query. |
-| Fungsi `security definer` bisa dipanggil user login (21) | Disengaja: jalur RPC staf/host; tiap fungsi memeriksa hak akses sendiri. |
+| Fungsi `security definer` bisa dipanggil user login (31) | Disengaja: jalur RPC staf/host/admin; tiap fungsi memeriksa hak akses sendiri (`admin_*` lewat `require_admin()`). |
+| `resolve_custom_domain` bisa dipanggil anon | Disengaja: dipakai proxy sebelum ada sesi. Hanya mengembalikan slug untuk domain aktif milik event yang sudah dipublikasikan. |
 | Login anonim diizinkan | Disengaja: perangkat staf hari-H. Policy hanya memberi akses lewat peran staf aktif. |
 | RLS tanpa policy (`rate_limit_hits`, `staff_sessions`) | Disengaja: hanya diakses server atau fungsi. |
 | Proteksi password bocor | Tidak relevan: login host memakai magic link. |
@@ -112,13 +126,13 @@ Di Vercel, server berada satu region dengan Supabase (ap-southeast-1), sehingga 
 
 ## Harus beres sebelum pilot
 
-1. Super Admin minimal (Minggu 7): cari event/order, aktivasi manual, refund, takedown.
-2. Domain sendiri untuk deploy Vercel (sekarang `momenkita-hazel.vercel.app`, paket Hobby yang hanya untuk non-komersial): perbarui Site URL Supabase, CORS R2, dan URL notifikasi Midtrans saat domain berganti. Uji webhook Midtrans sungguhan lewat pembayaran sandbox di produksi.
-3. SMTP sendiri untuk email login (layanan bawaan Supabase hanya 2 email/jam untuk seluruh project), lalu email invoice.
-4. Job retensi album (hapus file setelah masa simpan) beserta email pengingat H-30/H-7; bergantung pada email.
-5. Error tracking dan pemantauan hari-H.
-6. Uji perangkat nyata (matriks §8 baris 6), termasuk scanner kamera, kamera tamu di WhatsApp, cabut kabel 5 menit, dan ZIP 1.000 foto di Chrome.
-7. Load test skala penuh di staging.
+1. Domain sendiri untuk deploy Vercel (sekarang `momenkita-hazel.vercel.app`, paket Hobby yang hanya untuk non-komersial): perbarui Site URL Supabase, CORS R2, dan URL notifikasi Midtrans saat domain berganti. Uji webhook Midtrans sungguhan lewat pembayaran sandbox di produksi.
+2. SMTP sendiri untuk email login (layanan bawaan Supabase hanya 2 email/jam untuk seluruh project), lalu email invoice.
+3. Job retensi album (hapus file setelah masa simpan) beserta email pengingat H-30/H-7; bergantung pada email.
+4. Error tracking dan pemantauan hari-H.
+5. Uji perangkat nyata (matriks §8 baris 6), termasuk scanner kamera, kamera tamu di WhatsApp, cabut kabel 5 menit, dan ZIP 1.000 foto di Chrome.
+6. Load test skala penuh di staging.
+7. Angkat akun admin tim (lihat README, Catatan operasional) dan uji custom domain sungguhan untuk calon pilot Luxury.
 
 ## Keterbatasan yang diketahui
 
