@@ -1,11 +1,11 @@
 // Uji end-to-end alur upload tamu: guest session -> presign -> PUT ke R2 -> confirm.
-// Butuh dev server di localhost:3000 dan .env.local. Membuat user/event uji lalu menghapusnya (termasuk objek R2).
+// Butuh dev server di localhost:3000 (atau BASE=https://...) dan .env.local. Membuat user/event uji lalu menghapusnya (termasuk objek R2).
 import fs from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 import { DeleteObjectCommand, ListObjectsV2Command, S3Client } from '@aws-sdk/client-s3';
 
 const env = Object.fromEntries(fs.readFileSync('.env.local', 'utf8').split(/\r?\n/).filter((l) => l.includes('=') && !l.startsWith('#')).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1).trim()]));
-const BASE = 'http://localhost:3000';
+const BASE = process.env.BASE ?? 'http://localhost:3000';
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SECRET_KEY, { auth: { persistSession: false } });
 const r2Configured = ['R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET'].every((k) => env[k]);
 

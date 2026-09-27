@@ -10,7 +10,7 @@ import { DeleteObjectCommand, ListObjectsV2Command, S3Client } from '@aws-sdk/cl
 import { downloadZip } from 'client-zip';
 
 const env = Object.fromEntries(fs.readFileSync('.env.local', 'utf8').split(/\r?\n/).filter((l) => l.includes('=') && !l.startsWith('#')).map((l) => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1).trim()]));
-const BASE = 'http://localhost:3000';
+const BASE = process.env.BASE ?? 'http://localhost:3000';
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SECRET_KEY, { auth: { persistSession: false } });
 const newClient = () => createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } });
 

@@ -18,6 +18,15 @@ async function callbackUrl(next: string) {
   return `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
 }
 
+// Supabase membatasi dua hal: satu permintaan per alamat tiap 60 detik ("...after 42 seconds"),
+// dan kuota email seluruh project per jam (layanan email bawaan hanya 2 email/jam; SMTP sendiri jauh lebih longgar).
+function magicLinkError(error: { status?: number; message: string }) {
+  if (error.status !== 429) return "Link masuk gagal dikirim. Coba lagi sebentar lagi.";
+  const seconds = Number(error.message.match(/after (\d+) seconds?/)?.[1]);
+  if (seconds) return `Link masuk baru saja dikirim ke email ini. Tunggu ${seconds} detik sebelum meminta lagi.`;
+  return "Batas pengiriman email login sedang tercapai. Coba lagi sekitar satu jam lagi, atau pakai link terakhir yang sudah masuk ke email Anda.";
+}
+
 export async function sendMagicLink(_prev: MagicLinkState, formData: FormData): Promise<MagicLinkState> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const next = safeNextPath(String(formData.get("next") ?? ""));
@@ -33,12 +42,9 @@ export async function sendMagicLink(_prev: MagicLinkState, formData: FormData): 
   });
 
   if (error) {
-    // Supabase membatasi pengiriman email per alamat dan per jam; pesan aslinya berbahasa Inggris.
-    const message =
-      error.status === 429
-        ? "Terlalu banyak permintaan. Tunggu sekitar satu menit lalu coba lagi."
-        : "Link masuk gagal dikirim. Coba lagi sebentar lagi.";
-    return { status: "error", email, message };
+    // Kode error dicatat (tanpa email) agar penyebab kegagalan terlihat di log server.
+    console.warn(`signInWithOtp gagal: ${error.status} ${error.code ?? ""} ${error.message}`);
+    return { status: "error", email, message: magicLinkError(error) };
   }
 
   return { status: "sent", email };

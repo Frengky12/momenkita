@@ -88,6 +88,18 @@ Ringkasan dari PRD §7.4:
 - **Tamu:** hanya lewat Route Handler yang memakai `lib/supabase/admin.ts`.
 - **Tabel baru:** setiap migrasi yang menambah tabel harus mengulang pola `revoke` + `grant` di `supabase/migrations/20260926000300_rls.sql`, karena default Supabase memberi `anon`/`authenticated` akses penuh ke tabel baru.
 
+## Deploy (Vercel)
+
+Repo `Frengky12/momenkita` terhubung ke Vercel; setiap push ke `main` otomatis ter-deploy ke `https://momenkita-hazel.vercel.app`.
+
+- **Region:** `vercel.json` menetapkan `sin1` (Singapura), satu region dengan Supabase (ap-southeast-1).
+- **Environment variables:** semua isi `.env.local` (10 variabel, lihat `.env.example`) di-set di Vercel → Settings → Environment Variables. `NEXT_PUBLIC_*` dibaca saat build, jadi deploy ulang setelah mengubahnya.
+- **Supabase → Authentication → URL Configuration:** Site URL = domain produksi; Redirect URLs berisi `https://<domain>/**` dan `http://localhost:3000/**`.
+- **Cloudflare R2 → CORS:** `AllowedOrigins` berisi domain produksi dan `http://localhost:3000`, `AllowedMethods` GET, PUT, HEAD, `AllowedHeaders` content-type.
+- **Midtrans → Payment Notification URL:** `https://<domain>/api/midtrans/notification`.
+- **Uji terhadap produksi:** `BASE=https://momenkita-hazel.vercel.app npm run test:upload` (juga `test:staff`, `test:gallery`, `test:load`).
+- **Email login:** layanan email bawaan Supabase hanya 2 email/jam untuk seluruh project. Pasang SMTP sendiri (Authentication → Emails → SMTP Settings) sebelum dipakai host sungguhan.
+
 ## Catatan operasional
 
 - **Partisi Realtime.** Partisi harian `realtime.messages` dibuat layanan Realtime Supabase saat ada klien tersambung. Tanpa partisi, broadcast dari trigger hilang tanpa error (`realtime.send` hanya memberi WARNING). Karena itu layar panggung dan konsol moderasi wajib memuat ulang data lewat RPC (`staff_photos`, `staff_guest_list`) setiap kali tersambung, jangan hanya mengandalkan broadcast.

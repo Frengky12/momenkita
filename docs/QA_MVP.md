@@ -1,7 +1,8 @@
 # QA MVP MomenKita
 
 Status Kriteria Penerimaan (KP) dan persyaratan non-fungsional PRD v1.4.0 di akhir Minggu 6 (27 Sep 2026).
-Semua uji dijalankan di mesin pengembangan terhadap project Supabase dev, bucket R2, dan Midtrans Sandbox.
+Uji dijalankan terhadap project Supabase dev, bucket R2, dan Midtrans Sandbox, di mesin pengembangan dan di deploy
+Vercel `https://momenkita-hazel.vercel.app` (region sin1, paket Hobby).
 
 **Keterangan:** ✅ lolos dengan bukti · ⚠️ lolos sebagian/simulasi, perlu uji ulang · ⏳ belum bisa diuji di lingkungan ini
 
@@ -14,6 +15,8 @@ Semua uji dijalankan di mesin pengembangan terhadap project Supabase dev, bucket
 | `npm run test:staff` | Link staf + PIN, API foto staf, Realtime, moderasi, check-in, pencabutan | 30/30 |
 | `npm run test:gallery` | Akses galeri, passcode, laporan, manifest ZIP per peran, integritas ZIP | 28/28 |
 | `npm run test:load` | Load test skala kecil (lihat bagian Kapasitas) | 0 error |
+
+`test:upload`, `test:staff`, dan `test:gallery` juga lolos penuh terhadap deploy produksi (`BASE=https://momenkita-hazel.vercel.app`).
 
 ## Kriteria Penerimaan per modul
 
@@ -56,7 +59,7 @@ Semua uji dijalankan di mesin pengembangan terhadap project Supabase dev, bucket
 
 | KP | Status | Bukti |
 | :--- | :---: | :--- |
-| Approve/upload instan → tampil di panggung p95 ≤ 2 detik | ✅ | Browser: 0,8–1,4 detik (termasuk unduh foto). Load test: konfirmasi → subscriber p95 1,60 detik. |
+| Approve/upload instan → tampil di panggung p95 ≤ 2 detik | ✅ | Browser: 0,8–1,4 detik (termasuk unduh foto). Load test di Vercel: konfirmasi → subscriber p95 0,99 detik. |
 | Blackout konsol ≤ 1 detik; tombol `B` instan tanpa jaringan | ✅ | 155 ms dari konsol; `B` langsung tanpa jaringan. |
 | Cabut kabel 5 menit, slideshow tetap jalan dan sinkron lagi | ⚠️ | Disimulasikan sekitar 40 detik (request diputus): slideshow terus berputar dari cache, foto yang terlewat muncul 1,85 detik setelah online. Uji fisik 5 menit di laptop panggung belum. |
 
@@ -72,10 +75,10 @@ Semua uji dijalankan di mesin pengembangan terhadap project Supabase dev, bucket
 | # | Target | Status | Catatan |
 | :--- | :--- | :---: | :--- |
 | 1 | Latensi panggung p95 ≤ 2 detik | ✅ | Lihat §5.4. |
-| 2 | JS awal kamera ≤ 150 KB; LCP ≤ 2,5 detik; kamera siap ≤ 3 detik | ⚠️ | JS 139 KB ✅. LCP sekitar 2,5 detik di server lokal (batas); ukur ulang di Vercel. Kamera siap ⏳. |
+| 2 | JS awal kamera ≤ 150 KB; LCP ≤ 2,5 detik; kamera siap ≤ 3 detik | ⚠️ | JS 139 KB ✅. LCP di Vercel 2,1–2,3 detik, Performance 97–99 ✅. Kamera siap ≤ 3 detik ⏳ HP nyata. |
 | 3 | Keandalan upload ≥ 99% | ⚠️ | Load test 299/299 (100%). Angka nyata diukur saat pilot. |
 | 4 | Ketersediaan 99,9% akhir pekan | ⏳ | Butuh deploy dan uptime monitor. |
-| 5 | Kapasitas: 50 event, 30 upload/detik, 250 koneksi realtime | ⚠️ | Skala kecil lolos (5 event, 4,6 upload/detik, 50 koneksi, 0 error, 2.990/2.990 broadcast). Skala penuh di staging/Supabase Pro sebelum pilot. |
+| 5 | Kapasitas: 50 event, 30 upload/detik, 250 koneksi realtime | ⚠️ | Skala kecil lolos di lokal (4,6 upload/detik, 2.990/2.990 broadcast) dan di Vercel (3,6 upload/detik, 1.590/1.590 broadcast), 0 error. Skala penuh di Supabase Pro sebelum pilot. |
 | 6 | Kompatibilitas perangkat | ⏳ | Matriks uji: Android Chrome, iOS Safari 16+, in-app WhatsApp/Instagram, Chrome desktop panggung. |
 | 7 | Keamanan | ⚠️ | Token 128-bit, RLS semua tabel, signed URL ber-TTL, rate limit presign/RSVP/passcode/laporan, link staf kedaluwarsa H+1 ✅. Security review menyeluruh ⏳. |
 | 8 | Backup harian | ⏳ | Bawaan Supabase Pro; project dev masih paket gratis. |
@@ -84,16 +87,16 @@ Semua uji dijalankan di mesin pengembangan terhadap project Supabase dev, bucket
 
 ### Load test skala kecil
 
-`EVENTS=5 GUESTS=10 RATE=5 DURATION=60 SUBSCRIBERS=10`, build produksi di mesin lokal:
+5 event × 10 sesi tamu, 10 subscriber realtime per event (50 koneksi). Klien load test berjalan dari mesin pengembangan.
 
-| Tahap | p50 | p95 | p99 |
-| :--- | ---: | ---: | ---: |
-| Presign | 303 ms | 1.262 ms | 1.667 ms |
-| PUT ke R2 | 379 ms | 764 ms | 1.234 ms |
-| Konfirmasi | 553 ms | 1.603 ms | 2.100 ms |
-| Konfirmasi → layar panggung | 547 ms | 1.601 ms | 2.092 ms |
+| Tahap (p50 / p95) | Build produksi di mesin lokal | Vercel sin1 |
+| :--- | ---: | ---: |
+| Presign | 303 / 1.262 ms | 221 / 365 ms |
+| PUT ke R2 | 379 / 764 ms | 573 / 1.137 ms |
+| Konfirmasi | 553 / 1.603 ms | 532 / 1.022 ms |
+| Konfirmasi → layar panggung | 547 / 1.601 ms | 513 / 999 ms |
 
-Latensi didominasi perjalanan jaringan dari mesin lokal ke Supabase dan R2. Di Vercel (region yang sama dengan Supabase) angkanya diperkirakan lebih kecil; ukur ulang di staging.
+Di Vercel, server berada satu region dengan Supabase (ap-southeast-1), sehingga query database jauh lebih cepat. PUT ke R2 dikirim langsung dari klien, jadi angkanya bergantung pada jaringan pengunggah.
 
 ## Supabase advisors
 
@@ -110,8 +113,8 @@ Latensi didominasi perjalanan jaringan dari mesin lokal ke Supabase dan R2. Di V
 ## Harus beres sebelum pilot
 
 1. Super Admin minimal (Minggu 7): cari event/order, aktivasi manual, refund, takedown.
-2. Deploy ke Vercel dengan domain: URL webhook Midtrans, aturan CORS R2 untuk domain produksi (GET dan PUT), ukur ulang LCP.
-3. Email invoice dan SMTP (menunggu keputusan domain).
+2. Domain sendiri untuk deploy Vercel (sekarang `momenkita-hazel.vercel.app`, paket Hobby yang hanya untuk non-komersial): perbarui Site URL Supabase, CORS R2, dan URL notifikasi Midtrans saat domain berganti. Uji webhook Midtrans sungguhan lewat pembayaran sandbox di produksi.
+3. SMTP sendiri untuk email login (layanan bawaan Supabase hanya 2 email/jam untuk seluruh project), lalu email invoice.
 4. Job retensi album (hapus file setelah masa simpan) beserta email pengingat H-30/H-7; bergantung pada email.
 5. Error tracking dan pemantauan hari-H.
 6. Uji perangkat nyata (matriks §8 baris 6), termasuk scanner kamera, kamera tamu di WhatsApp, cabut kabel 5 menit, dan ZIP 1.000 foto di Chrome.
