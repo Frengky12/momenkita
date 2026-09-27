@@ -105,7 +105,15 @@ Repo `Frengky12/momenkita` terhubung ke Vercel; setiap push ke `main` otomatis t
 - **Cloudflare R2 → CORS:** `AllowedOrigins` berisi domain produksi dan `http://localhost:3000`, `AllowedMethods` GET, PUT, HEAD, `AllowedHeaders` content-type.
 - **Midtrans → Payment Notification URL:** `https://<domain>/api/midtrans/notification`.
 - **Uji terhadap produksi:** `BASE=https://momenkita-hazel.vercel.app npm run test:upload` (juga `test:staff`, `test:gallery`, `test:admin`, `test:load`). Bagian custom domain di `test:admin` hanya berjalan ke `localhost`.
-- **Email login:** layanan email bawaan Supabase hanya 2 email/jam untuk seluruh project. Pasang SMTP sendiri (Authentication → Emails → SMTP Settings) sebelum dipakai host sungguhan.
+- **Email login:** SMTP sendiri dipasang di Authentication → Emails → SMTP Settings (layanan bawaan Supabase hanya 2 email/jam untuk seluruh project). Batas kirim diatur di Authentication → Rate Limits.
+- **Template email:** sumbernya di `supabase/templates/`; salin isinya ke Authentication → Emails → Templates. Email pertama untuk alamat baru memakai template Confirm signup, login berikutnya memakai Magic Link, jadi keduanya harus diganti.
+
+  | Template | Subject | File |
+  | :--- | :--- | :--- |
+  | Confirm signup | Konfirmasi email untuk MomenKita | `confirm-signup.html` |
+  | Magic Link | Link masuk ke MomenKita | `magic-link.html` |
+
+  Tautan di template memakai `{{ .RedirectTo }}&token_hash={{ .TokenHash }}&type=email` agar link bisa dibuka di perangkat mana pun (`/auth/callback` memverifikasi `token_hash`). Syaratnya URL `/auth/callback` ada di Redirect URLs; kalau tidak, Supabase memakai Site URL dan link menjadi rusak.
 - **Custom domain Luxury:** tambahkan domain di Vercel → Settings → Domains, atur DNS sesuai petunjuk Vercel, lalu catat dan aktifkan di `/admin/domain`. Setelah aplikasi punya domain utama sendiri, isi `PRIMARY_HOSTS` (lihat `.env.example`) agar domain utama tidak dianggap custom domain. `localhost` dan `*.vercel.app` selalu dianggap domain utama.
 
 ## Catatan operasional

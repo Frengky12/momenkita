@@ -127,7 +127,7 @@ Di Vercel, server berada satu region dengan Supabase (ap-southeast-1), sehingga 
 ## Harus beres sebelum pilot
 
 1. Domain sendiri untuk deploy Vercel (sekarang `momenkita-hazel.vercel.app`, paket Hobby yang hanya untuk non-komersial): perbarui Site URL Supabase, CORS R2, dan URL notifikasi Midtrans saat domain berganti. Uji webhook Midtrans sungguhan lewat pembayaran sandbox di produksi.
-2. SMTP sendiri untuk email login (layanan bawaan Supabase hanya 2 email/jam untuk seluruh project), lalu email invoice.
+2. Email: SMTP sendiri sudah dipasang dan template login berbahasa Indonesia ada di `supabase/templates/`. Sisa: uji login lewat email di produksi (termasuk buka link di perangkat lain) dan email invoice.
 3. Job retensi album (hapus file setelah masa simpan) beserta email pengingat H-30/H-7; bergantung pada email.
 4. Error tracking dan pemantauan hari-H.
 5. Uji perangkat nyata (matriks §8 baris 6), termasuk scanner kamera, kamera tamu di WhatsApp, cabut kabel 5 menit, dan ZIP 1.000 foto di Chrome.
