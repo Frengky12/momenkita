@@ -13,6 +13,7 @@ export function EventTabs({ eventId }: { eventId: string }) {
     { href: `/dashboard/events/${eventId}/publikasi`, label: "Publikasi" },
     { href: `/dashboard/events/${eventId}/hari-h`, label: "Hari-H" },
     { href: `/dashboard/events/${eventId}/galeri`, label: "Galeri" },
+    { href: `/dashboard/events/${eventId}/pengelola`, label: "Pengelola" },
   ];
 
   return (

@@ -6,3 +6,8 @@ export function whatsappMessage(template: string, values: { nama: string; link: 
 export function whatsappUrl(phone: string, message: string) {
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
+
+// Tanpa nomor tujuan: WhatsApp membuka daftar chat agar pengirim memilih penerimanya sendiri.
+export function whatsappShareUrl(message: string) {
+  return `https://wa.me/?text=${encodeURIComponent(message)}`;
+}

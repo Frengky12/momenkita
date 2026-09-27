@@ -72,6 +72,8 @@ src/
 | `/[slug]/galeri` | Tamu (bila dibuka host, passcode opsional), pengelola event selalu | §5.5 |
 | `/dashboard/events/[eventId]/galeri` | Host: buka galeri, passcode, unduh ZIP, tinjau laporan foto | §5.5, §9.4 |
 | `/dashboard/events/[eventId]/tamu/laporan` | Host: unduh laporan buku tamu XLSX | §5.5 |
+| `/dashboard/events/[eventId]/pengelola` | Pemilik: undang dan keluarkan co-host (link sekali pakai, 7 hari). Co-host: lihat pengelola, keluar dari event | §2.2 |
+| `/dashboard/gabung/[token]` | Penerima undangan co-host: terima setelah login (tamu yang belum login diarahkan ke `/login?next=...`) | §2.2 |
 | `/dashboard/events/[eventId]/hari-h` (+ `/qr-meja`) | Host: link staf + PIN, mode moderasi, buka konsol, cetak QR meja | §2.2, §5.4 |
 | `/staff#<token>` | Staf: masuk dengan link + PIN | §2.2 |
 | `/staff/[eventId]/panggung` · `moderasi` · `scanner` | Layar panggung · moderator · penerima tamu (host yang login bisa membukanya tanpa PIN) | §5.2, §5.4 |
@@ -90,6 +92,7 @@ Slug event yang bentrok dengan route aplikasi (`api`, `auth`, `login`, `dashboar
 Ringkasan dari PRD §7.4:
 
 - **Host/WO:** RLS langsung ke tabel lewat `lib/supabase/client.ts` / `server.ts`.
+- **Co-host:** punya akses pengelola yang sama dengan pemilik (`is_event_manager`). Co-host hanya bertambah lewat RPC `accept_cohost_invite`; insert langsung ke `event_cohosts` ditolak. Mengundang, mencabut undangan, dan mengeluarkan co-host hanya bisa dilakukan pemilik event. Co-host boleh menghapus barisnya sendiri (keluar).
 - **Staf hari-H:** hanya lewat RPC `staff_*` dengan `lib/supabase/staff.ts`. Host yang membuka halaman staf memakai sesi cookie-nya sendiri (`lib/staff/access.ts`).
 - **Tamu:** hanya lewat Route Handler yang memakai `lib/supabase/admin.ts`.
 - **Super Admin:** baca lewat RLS (`is_admin()`), tulis hanya lewat RPC `admin_*` yang memeriksa `is_admin()`, mewajibkan alasan, dan mencatat ke `admin_actions`. Halaman `/admin` memanggil `requireAdmin()` di layout dan di setiap page, karena Next.js merender keduanya paralel dan `notFound()` di layout saja tidak mencegah isi page ikut terkirim.

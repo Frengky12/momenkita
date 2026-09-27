@@ -282,7 +282,45 @@ check('draft event can be deleted', (await as(hostA, `delete from public.events 
 
 console.log('\n# co-host & profiles')
 check('outsider cannot see host profile', (await as(hostB, `select * from public.profiles where id = $1`, [hostA.id])).length === 0)
-await as(hostA, `insert into public.event_cohosts (event_id, profile_id) values ($1, $2)`, [ev.id, hostB.id])
+await expectErr('co-host cannot be inserted directly', as(hostA, `insert into public.event_cohosts (event_id, profile_id) values ($1, $2)`, [ev.id, hostB.id]), /permission denied/)
+await expectErr('non-owner cannot create co-host invite', as(hostB, `select public.create_cohost_invite($1, 'x')`, [ev.id]), /akses ditolak/)
+const invite = (await one(hostA, `select public.create_cohost_invite($1, '  Budi (mempelai pria)  ') r`, [ev.id])).r
+const inviteRow = await one('postgres', `select * from public.cohost_invites where id = $1`, [invite.id])
+check('invite stores only the token hash, label trimmed, 7 days', inviteRow.token_hash !== invite.token && inviteRow.token_hash.length === 64
+  && inviteRow.label === 'Budi (mempelai pria)' && Math.round((new Date(inviteRow.expires_at) - new Date(inviteRow.created_at)) / 864e5) === 7)
+await expectErr('anonymous device cannot preview invite', as(recDevice, `select public.cohost_invite_preview($1)`, [invite.token]), /akses ditolak/)
+check('unknown token reveals nothing', JSON.stringify((await one(hostB, `select public.cohost_invite_preview('salah') r`)).r) === '{"status":"invalid"}')
+const preview = (await one(hostB, `select public.cohost_invite_preview($1) r`, [invite.token])).r
+check('invitee previews event and owner', preview.status === 'valid' && preview.event_title === 'Budi & Ani' && preview.owner_email === 'ani@x.id', JSON.stringify(preview))
+check('owner opening own invite sees status owner', (await one(hostA, `select public.cohost_invite_preview($1) r`, [invite.token])).r.status === 'owner')
+check('owner accepting own invite does not consume it', (await one(hostA, `select public.accept_cohost_invite($1) id`, [invite.token])).id === ev.id
+  && (await one('postgres', `select accepted_at from public.cohost_invites where id = $1`, [invite.id])).accepted_at === null)
+check('invitee accepts and becomes co-host', (await one(hostB, `select public.accept_cohost_invite($1) id`, [invite.token])).id === ev.id
+  && (await one('postgres', `select accepted_by from public.cohost_invites where id = $1`, [invite.id])).accepted_by === hostB.id)
+check('co-host reopening the link sees status member', (await one(hostB, `select public.cohost_invite_preview($1) r`, [invite.token])).r.status === 'member')
+const latecomer = { id: await mkUser('telat@x.id') }
+check('used invite shows status used', (await one(latecomer, `select public.cohost_invite_preview($1) r`, [invite.token])).r.status === 'used')
+await expectErr('used invite cannot be reused', as(latecomer, `select public.accept_cohost_invite($1)`, [invite.token]), /tidak berlaku/)
+await expectErr('co-host cannot create invites', as(hostB, `select public.create_cohost_invite($1, 'x')`, [ev.id]), /akses ditolak/)
+check('co-host sees invite list', (await as(hostB, `select id, label from public.cohost_invites where event_id = $1`, [ev.id])).length === 1)
+await expectErr('token hash is not readable', as(hostA, `select token_hash from public.cohost_invites`), /permission denied/)
+const revoked = (await one(hostA, `select public.create_cohost_invite($1, '') r`, [ev.id])).r
+await expectErr('co-host cannot revoke invites', as(hostB, `select public.revoke_cohost_invite($1)`, [revoked.id]), /tidak ditemukan/)
+await as(hostA, `select public.revoke_cohost_invite($1)`, [revoked.id])
+check('revoked invite shows status revoked', (await one(latecomer, `select public.cohost_invite_preview($1) r`, [revoked.token])).r.status === 'revoked')
+await expectErr('revoked invite cannot be accepted', as(latecomer, `select public.accept_cohost_invite($1)`, [revoked.token]), /tidak berlaku/)
+const expired = (await one(hostA, `select public.create_cohost_invite($1, '') r`, [ev.id])).r
+await as('postgres', `update public.cohost_invites set expires_at = now() - interval '1 second' where id = $1`, [expired.id])
+await expectErr('expired invite cannot be accepted', as(latecomer, `select public.accept_cohost_invite($1)`, [expired.token]), /tidak berlaku/)
+const active = []
+for (let i = 0; i < 5; i++) active.push((await one(hostA, `select public.create_cohost_invite($1, '') r`, [ev.id])).r)
+await expectErr('at most 5 active invites', as(hostA, `select public.create_cohost_invite($1, '')`, [ev.id]), /maksimal 5/)
+await as(latecomer, `select public.accept_cohost_invite($1)`, [active[0].token])
+check('co-host cannot remove another co-host', (await as(hostB, `delete from public.event_cohosts where profile_id = $1 returning profile_id`, [latecomer.id])).length === 0)
+check('co-host can leave the event', (await as(latecomer, `delete from public.event_cohosts where profile_id = auth.uid() returning profile_id`)).length === 1)
+await as(latecomer, `select public.accept_cohost_invite($1)`, [active[1].token])
+check('owner can remove a co-host', (await as(hostA, `delete from public.event_cohosts where profile_id = $1 returning profile_id`, [latecomer.id])).length === 1)
+check('removed co-host loses access', (await as(latecomer, `select * from public.events where id = $1`, [ev.id])).length === 0)
 check('co-host sees event', (await as(hostB, `select * from public.events where id = $1`, [ev.id])).length === 1)
 check('co-host sees invitations', (await as(hostB, `select * from public.invitations`)).length === 5)
 check('co-host sees owner profile', (await as(hostB, `select * from public.profiles where id = $1`, [hostA.id])).length === 1)

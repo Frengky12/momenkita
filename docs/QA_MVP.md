@@ -10,7 +10,7 @@ Vercel `https://momenkita-hazel.vercel.app` (region sin1, paket Hobby).
 
 | Perintah | Isi | Hasil |
 | :--- | :--- | :--- |
-| `npm run test:db` | Migrasi di PGlite, RLS, grant, trigger, RPC (termasuk RPC `admin_*`) | 170/170 |
+| `npm run test:db` | Migrasi di PGlite, RLS, grant, trigger, RPC (termasuk RPC `admin_*` dan undangan co-host) | 194/194 |
 | `npm run test:upload` | Sesi tamu, presign, PUT R2, konfirmasi, hapus | 33/33 |
 | `npm run test:staff` | Link staf + PIN, API foto staf, Realtime, moderasi, check-in, pencabutan | 30/30 |
 | `npm run test:gallery` | Akses galeri, passcode, laporan, manifest ZIP per peran, integritas ZIP | 28/28 |

@@ -31,7 +31,7 @@ export default async function DashboardPage() {
   if (memberships?.length) managed.push(`organization_id.in.(${memberships.map((m) => m.organization_id).join(",")})`);
   const { data: events, error } = await supabase
     .from("events")
-    .select("id, title, slug, status, package")
+    .select("id, title, slug, status, package, owner_id")
     .or(managed.join(","))
     .order("created_at", { ascending: false });
 
@@ -80,6 +80,7 @@ export default async function DashboardPage() {
                   {STATUS_LABEL[event.status] ?? event.status}
                   {" · "}
                   {event.package ? PACKAGE_LABEL[event.package] : "Belum dibayar"}
+                  {event.owner_id !== uid && " · Co-host"}
                 </span>
               </Link>
             </li>

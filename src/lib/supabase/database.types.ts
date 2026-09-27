@@ -159,6 +159,67 @@ export type Database = {
         }
         Relationships: []
       }
+      cohost_invites: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          created_by: string | null
+          event_id: string
+          expires_at: string
+          id: string
+          label: string
+          revoked_at: string | null
+          token_hash: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          event_id: string
+          expires_at?: string
+          id?: string
+          label?: string
+          revoked_at?: string | null
+          token_hash: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          event_id?: string
+          expires_at?: string
+          id?: string
+          label?: string
+          revoked_at?: string | null
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cohost_invites_accepted_by_fkey"
+            columns: ["accepted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cohost_invites_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cohost_invites_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       credit_ledger: {
         Row: {
           actor_id: string | null
@@ -1151,6 +1212,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      accept_cohost_invite: { Args: { p_token: string }; Returns: string }
       admin_activate_event: {
         Args: { p_event_id: string; p_package: string; p_reason: string }
         Returns: Json
@@ -1219,6 +1281,11 @@ export type Database = {
       }
       cleanup_ops_data: { Args: never; Returns: undefined }
       cleanup_staff_devices: { Args: never; Returns: number }
+      cohost_invite_preview: { Args: { p_token: string }; Returns: Json }
+      create_cohost_invite: {
+        Args: { p_event_id: string; p_label?: string }
+        Returns: Json
+      }
       create_staff_link: {
         Args: { p_event_id: string; p_label?: string; p_role: string }
         Returns: Json
@@ -1264,6 +1331,10 @@ export type Database = {
         Returns: undefined
       }
       resolve_custom_domain: { Args: { p_host: string }; Returns: string }
+      revoke_cohost_invite: {
+        Args: { p_invite_id: string }
+        Returns: undefined
+      }
       set_gallery_passcode: {
         Args: { p_event_id: string; p_passcode: string }
         Returns: undefined
