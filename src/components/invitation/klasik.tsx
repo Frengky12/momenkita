@@ -2,12 +2,14 @@ import { Cormorant_Garamond } from "next/font/google";
 import Link from "next/link";
 import { Countdown } from "@/components/invitation/countdown";
 import { CopyText } from "@/components/invitation/copy-text";
+import { Gallery } from "@/components/invitation/gallery";
 import { MarkOpened } from "@/components/invitation/mark-opened";
 import { RsvpForm } from "@/components/invitation/rsvp-form";
 import { QrCode } from "@/components/qr-code";
 import { TIMEZONE_LABELS, coupleNames, formatDate, formatTime, type EventTimezone, type Person } from "@/lib/invitation/content";
 import { googleCalendarUrl, mapsUrl, wazeUrl } from "@/lib/invitation/links";
 import type { InvitationData } from "@/lib/invitation/load";
+import type { MediaItem } from "@/lib/invitation/media";
 import { cn } from "@/lib/utils";
 
 // Serif kontras tinggi bernuansa undangan cetak; hanya untuk nama dan judul, teks isi tetap Inter agar nyaman dibaca di HP.
@@ -29,9 +31,10 @@ export function KlasikInvitation({
   icsBaseUrl: string;
   preview?: boolean;
 }) {
-  const { event, sessions, guest, wishes } = data;
+  const { event, sessions, guest, wishes, media } = data;
   const { content, gifts, timezone } = event;
   const [first, second] = coupleNames(content);
+  const [firstPhoto, secondPhoto] = content.couple.order === "bride-first" ? [media.bride, media.groom] : [media.groom, media.bride];
   const tz = TIMEZONE_LABELS[timezone as EventTimezone] ?? "";
   const mainSession = sessions[0];
   // Tombol kamera muncul pada tanggal sesi mana pun (zona waktu event), hanya untuk paket berkamera (PRD §5.3).
@@ -48,6 +51,18 @@ export function KlasikInvitation({
       {guest && !preview && <MarkOpened slug={event.slug} personalSlug={guest.personalSlug} />}
 
       <header className="flex min-h-dvh flex-col items-center justify-center gap-6 px-6 py-16 text-center">
+        {media.cover && (
+          // Bingkai lengkung khas undangan cetak; foto dipotong ke rasio 4:5 agar sampul tetap muat satu layar HP.
+          // eslint-disable-next-line @next/next/no-img-element -- signed URL R2
+          <img
+            src={media.cover.url}
+            alt={`Foto ${first.nickname} dan ${second.nickname}`}
+            width={media.cover.width}
+            height={media.cover.height}
+            fetchPriority="high"
+            className="aspect-[4/5] h-[46dvh] max-h-[28rem] w-auto rounded-t-full border-4 border-(--inv-card) object-cover shadow-sm"
+          />
+        )}
         <p className="font-display text-xl italic text-(--inv-accent)">Undangan Pernikahan</p>
         <h1 className="font-display text-5xl leading-tight font-semibold [overflow-wrap:anywhere] sm:text-6xl">
           {first.nickname}
@@ -86,16 +101,23 @@ export function KlasikInvitation({
           <h2 id="mempelai" className="sr-only">
             Mempelai
           </h2>
-          <Profile person={first} role={content.couple.order === "bride-first" ? "Putri" : "Putra"} />
+          <Profile person={first} photo={firstPhoto} role={content.couple.order === "bride-first" ? "Putri" : "Putra"} />
           <p className="font-display text-5xl text-(--inv-accent) italic" aria-hidden>
             &amp;
           </p>
-          <Profile person={second} role={content.couple.order === "bride-first" ? "Putra" : "Putri"} />
+          <Profile person={second} photo={secondPhoto} role={content.couple.order === "bride-first" ? "Putra" : "Putri"} />
         </section>
 
         {mainSession && (
           <section aria-label="Hitung mundur" className="flex flex-col items-center gap-4 text-center">
             <Countdown startsAt={mainSession.starts_at} endsAt={sessions[sessions.length - 1].ends_at} />
+          </section>
+        )}
+
+        {media.gallery.length > 0 && (
+          <section aria-labelledby="galeri" className="flex flex-col gap-6">
+            <SectionTitle id="galeri">Galeri</SectionTitle>
+            <Gallery items={media.gallery} alt={`Galeri ${first.nickname} dan ${second.nickname}`} />
           </section>
         )}
 
@@ -198,7 +220,7 @@ export function KlasikInvitation({
           )}
         </section>
 
-        {(gifts.accounts.length > 0 || gifts.address) && (
+        {(gifts.accounts.length > 0 || gifts.address || media.qris) && (
           <section aria-labelledby="amplop" className="flex flex-col gap-6 text-center">
             <SectionTitle id="amplop">Amplop Digital</SectionTitle>
             <p className="text-(--inv-muted)">Doa restu kamu sudah lebih dari cukup. Jika ingin memberi tanda kasih, bisa melalui:</p>
@@ -210,6 +232,21 @@ export function KlasikInvitation({
                 <CopyText text={account.number} label="Salin nomor" />
               </div>
             ))}
+            {media.qris && (
+              <div className="flex flex-col items-center gap-3 rounded-2xl border border-(--inv-line) bg-(--inv-card) px-5 py-6">
+                <p className="font-semibold">QRIS</p>
+                {/* eslint-disable-next-line @next/next/no-img-element -- signed URL R2 */}
+                <img
+                  src={media.qris.url}
+                  alt="Kode QRIS untuk amplop digital"
+                  width={media.qris.width}
+                  height={media.qris.height}
+                  loading="lazy"
+                  className="w-64 max-w-full rounded-lg bg-white object-contain"
+                />
+                <p className="text-sm text-(--inv-muted)">Pindai dengan aplikasi bank atau e-wallet mana pun.</p>
+              </div>
+            )}
             {gifts.address && (
               <div className="flex flex-col items-center gap-2 rounded-2xl border border-(--inv-line) bg-(--inv-card) px-5 py-6">
                 <p className="font-semibold">Kirim kado</p>
@@ -260,10 +297,21 @@ function SectionTitle({ id, children }: { id: string; children: React.ReactNode 
   );
 }
 
-function Profile({ person, role }: { person: Person; role: "Putra" | "Putri" }) {
+function Profile({ person, role, photo }: { person: Person; role: "Putra" | "Putri"; photo: MediaItem | null }) {
   const parents = [person.father, person.mother].filter(Boolean).join(" & ");
   return (
     <div className="flex flex-col items-center gap-2">
+      {photo && (
+        // eslint-disable-next-line @next/next/no-img-element -- signed URL R2
+        <img
+          src={photo.thumbUrl}
+          alt={`Foto ${person.nickname || person.fullName}`}
+          width={photo.width}
+          height={photo.height}
+          loading="lazy"
+          className="mb-2 size-40 rounded-full border-4 border-(--inv-card) object-cover shadow-sm"
+        />
+      )}
       <p className="font-display text-4xl font-semibold [overflow-wrap:anywhere]">{person.fullName || person.nickname}</p>
       {parents && (
         <p className="text-(--inv-muted)">

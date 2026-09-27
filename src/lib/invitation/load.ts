@@ -1,6 +1,7 @@
 import "server-only";
 import { parseContent, parseGifts, type GiftContent, type InvitationContent } from "@/lib/invitation/content";
 import type { SessionLike } from "@/lib/invitation/links";
+import { loadMedia, type InvitationMedia } from "@/lib/invitation/media";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -22,6 +23,7 @@ export type InvitationData = {
   sessions: SessionLike[];
   guest: InvitationGuest | null;
   wishes: Wish[];
+  media: InvitationMedia;
   rsvpOpen: boolean;
 };
 
@@ -42,7 +44,7 @@ async function assemble(
   event: { id: string; slug: string; title: string; timezone: string; package: string | null; theme_config: unknown; gift_config: unknown },
   personalSlug?: string,
 ) {
-  const [{ data: sessions }, { data: wishes }, guestResult] = await Promise.all([
+  const [{ data: sessions }, { data: wishes }, guestResult, media] = await Promise.all([
     client.from("event_sessions").select(SESSION_COLUMNS).eq("event_id", event.id).order("starts_at"),
     client.from("wishes").select("id, author_name, message, created_at").eq("event_id", event.id).eq("is_hidden", false).order("created_at", { ascending: false }).limit(30),
     personalSlug
@@ -53,6 +55,7 @@ async function assemble(
           .eq("personal_slug", personalSlug)
           .maybeSingle()
       : Promise.resolve({ data: null }),
+    loadMedia(client, event.id),
   ]);
 
   const invitation = guestResult.data;
@@ -77,6 +80,7 @@ async function assemble(
         }
       : null,
     wishes: wishes ?? [],
+    media,
     rsvpOpen: isRsvpOpen(content.rsvpDeadline, event.timezone),
   } satisfies InvitationData;
 }

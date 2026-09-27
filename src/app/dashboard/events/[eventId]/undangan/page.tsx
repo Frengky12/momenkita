@@ -14,21 +14,24 @@ import {
   type EventTimezone,
   type Person,
 } from "@/lib/invitation/content";
+import { loadMedia } from "@/lib/invitation/media";
 import { createClient } from "@/lib/supabase/server";
 import { deleteDraftEvent, deleteSession, saveCouple, saveGifts, saveSession, saveSettings, saveTexts } from "../actions";
+import { MediaManager } from "./media-manager";
 
 type Session = { id: string; name: string; starts_at: string; ends_at: string; venue_name: string | null; venue_address: string | null };
 
 export default async function InvitationEditorPage({ params }: PageProps<"/dashboard/events/[eventId]/undangan">) {
   const { eventId } = await params;
   const supabase = await createClient();
-  const [{ data: event }, { data: sessions }] = await Promise.all([
+  const [{ data: event }, { data: sessions }, media] = await Promise.all([
     supabase.from("events").select("id, slug, status, timezone, published_at, theme_config, gift_config").eq("id", eventId).maybeSingle(),
     supabase
       .from("event_sessions")
       .select("id, name, starts_at, ends_at, venue_name, venue_address")
       .eq("event_id", eventId)
       .order("starts_at"),
+    loadMedia(supabase, eventId),
   ]);
   if (!event) notFound();
 
@@ -53,6 +56,10 @@ export default async function InvitationEditorPage({ params }: PageProps<"/dashb
             </select>
           </Field>
         </SectionForm>
+      </Section>
+
+      <Section title="Foto" description="Foto dikompres otomatis di HP atau laptopmu sebelum diunggah, jadi tidak perlu diperkecil dulu.">
+        <MediaManager eventId={event.id} media={media} />
       </Section>
 
       <Section title="Acara" description={`Semua waktu dalam ${tzLabel}. Alamat dipakai untuk tombol Google Maps dan Waze.`}>

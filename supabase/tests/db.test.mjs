@@ -327,6 +327,28 @@ check('co-host sees owner profile', (await as(hostB, `select * from public.profi
 check('owner sees co-host profile', (await as(hostA, `select * from public.profiles where id = $1`, [hostB.id])).length === 1)
 check('admin sees everything', (await as(admin, `select * from public.events`)).length === 2)
 
+console.log('\n# invitation media')
+const mediaKey = (name) => `events/${ev.id}/invitation/${name}`
+const insertMedia = (who, kind, name, eventId = ev.id, prefixEvent = ev.id) =>
+  as(who, `insert into public.invitation_media (event_id, kind, key_display, key_thumb, width, height, bytes_display)
+    values ($1, $2, $3, $4, 1600, 1200, 1000) returning id, created_by`,
+    [eventId, kind, `events/${prefixEvent}/invitation/${name}/display.webp`, `events/${prefixEvent}/invitation/${name}/thumb.webp`])
+const cover = (await insertMedia(hostA, 'cover', 'c1'))[0]
+check('owner adds cover photo, created_by defaulted', cover.created_by === hostA.id)
+await expectErr('only one cover per event', insertMedia(hostA, 'cover', 'c2'), /duplicate key/)
+check('owner replaces cover by updating the row', (await as(hostA, `update public.invitation_media set key_display = $2, key_thumb = $3 where id = $1 returning id`,
+  [cover.id, mediaKey('c3/display.webp'), mediaKey('c3/thumb.webp')])).length === 1)
+await expectErr('key must live in this event folder', insertMedia(hostA, 'groom', 'g1', ev.id, draft.id), /invitation_media_key_prefix/)
+await expectErr('outsider cannot add media', insertMedia(latecomer, 'groom', 'g2'), /row-level security/)
+check('co-host adds groom photo', (await insertMedia(hostB, 'groom', 'g3')).length === 1)
+await expectErr('unknown kind rejected', insertMedia(hostA, 'poster', 'p1'), /check constraint/)
+for (let i = 0; i < 12; i++) await insertMedia(hostA, 'gallery', `gal${i}`)
+await expectErr('gallery limited to 12 photos', insertMedia(hostA, 'gallery', 'gal12'), /maksimal 12/)
+check('outsider sees no media', (await as(latecomer, `select * from public.invitation_media`)).length === 0)
+await expectErr('anon cannot read media table', as('anon', `select * from public.invitation_media`), /permission denied/)
+check('manager deletes gallery photo', (await as(hostA, `delete from public.invitation_media where kind = 'gallery' and key_display like '%gal0%' returning id`)).length === 1)
+check('owner sees media rows', (await as(hostA, `select * from public.invitation_media where event_id = $1`, [ev.id])).length === 13)
+
 console.log('\n# account deletion')
 const leaver = { id: await mkUser('leaver@x.id') }
 const leaverEvent = await one(leaver, `insert into public.events (slug, title) values ('leaver-ev', 'Leaver') returning id`)

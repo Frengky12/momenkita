@@ -551,6 +551,60 @@ export type Database = {
           },
         ]
       }
+      invitation_media: {
+        Row: {
+          bytes_display: number
+          created_at: string
+          created_by: string | null
+          event_id: string
+          height: number
+          id: string
+          key_display: string
+          key_thumb: string
+          kind: string
+          width: number
+        }
+        Insert: {
+          bytes_display: number
+          created_at?: string
+          created_by?: string | null
+          event_id: string
+          height: number
+          id?: string
+          key_display: string
+          key_thumb: string
+          kind: string
+          width: number
+        }
+        Update: {
+          bytes_display?: number
+          created_at?: string
+          created_by?: string | null
+          event_id?: string
+          height?: number
+          id?: string
+          key_display?: string
+          key_thumb?: string
+          kind?: string
+          width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitation_media_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitation_media_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           category: string
