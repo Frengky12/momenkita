@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createGuestToken } from "@/lib/guest-token";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CONSENT_VERSION, jsonError } from "@/lib/uploads";
+import { ACCEPTED_CONSENT_VERSIONS, jsonError } from "@/lib/uploads";
 
 // Membuka sesi kamera tamu. Dari undangan personal, invitationSlug mengikat sesi ke data tamu (tanpa isi nama).
 export async function POST(request: Request, ctx: RouteContext<"/api/events/[slug]/guest-sessions">) {
@@ -12,7 +12,10 @@ export async function POST(request: Request, ctx: RouteContext<"/api/events/[slu
     consentVersion?: unknown;
   } | null;
 
-  if (body?.consentVersion !== CONSENT_VERSION) return jsonError("consent_required", 400);
+  if (!body || typeof body.consentVersion !== "string" || !ACCEPTED_CONSENT_VERSIONS.includes(body.consentVersion)) {
+    return jsonError("consent_required", 400);
+  }
+  const consentVersion = body.consentVersion;
 
   const admin = createAdminClient();
   const { data: event } = await admin
@@ -44,7 +47,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/events/[slu
 
   const { data: session, error } = await admin
     .from("guest_sessions")
-    .insert({ event_id: event.id, invitation_id: invitationId, display_name: displayName, consent_version: CONSENT_VERSION })
+    .insert({ event_id: event.id, invitation_id: invitationId, display_name: displayName, consent_version: consentVersion })
     .select("id")
     .single();
   if (error) return jsonError("session_create_failed", 500);

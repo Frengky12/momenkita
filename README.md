@@ -86,7 +86,7 @@ src/
 | `/admin/promo` | Super Admin: promo masa peluncuran (paket gratis tanpa bayar), statistik klaim dan pembelian lanjutan, cabut klaim | §3 |
 | `/admin/laporan` · `/domain` · `/log` | Super Admin: antrean laporan + takedown · custom domain Luxury · log audit | §5.7, §9.4, §9.5 |
 
-Slug event yang bentrok dengan route aplikasi (`api`, `auth`, `login`, `dashboard`, `staff`, `admin`) ditolak oleh constraint `events_slug_not_reserved`. Perbarui constraint itu setiap kali menambah route tingkat atas.
+Slug event yang bentrok dengan route aplikasi (`api`, `auth`, `login`, `dashboard`, `staff`, `admin`, `legal`) ditolak oleh constraint `events_slug_not_reserved`. Perbarui constraint itu setiap kali menambah route tingkat atas.
 
 ## Model akses data
 

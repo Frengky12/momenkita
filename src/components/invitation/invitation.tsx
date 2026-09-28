@@ -285,6 +285,10 @@ export function Invitation({
         <Link href="/?ref=undangan" className="font-medium text-(--inv-accent) underline underline-offset-4">
           MomenKita
         </Link>
+        {" · "}
+        <Link href="/legal/privasi" className="underline underline-offset-4">
+          Privasi
+        </Link>
       </footer>
     </div>
   );

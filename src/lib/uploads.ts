@@ -4,7 +4,7 @@ import type { GuestToken } from "@/lib/guest-token";
 import { reportError } from "@/lib/report-error";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export { CONSENT_VERSION } from "@/lib/camera/consent";
+export { ACCEPTED_CONSENT_VERSIONS, CONSENT_VERSION } from "@/lib/camera/consent";
 
 // PRD §5.3: maksimal 1 foto per 3 detik dan 300 foto per sesi.
 export const UPLOAD_LIMITS = { minIntervalMs: 3000, perSession: 300 };

@@ -51,6 +51,15 @@ export default async function HomePage() {
           </p>
         </div>
       </main>
+
+      <footer className="flex flex-wrap justify-center gap-x-4 px-4 pb-6 text-sm text-muted-foreground">
+        <Link href="/legal/syarat" className="inline-flex min-h-11 items-center underline-offset-4 hover:underline">
+          Syarat &amp; Ketentuan
+        </Link>
+        <Link href="/legal/privasi" className="inline-flex min-h-11 items-center underline-offset-4 hover:underline">
+          Kebijakan Privasi
+        </Link>
+      </footer>
     </div>
   );
 }

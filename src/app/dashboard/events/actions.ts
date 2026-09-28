@@ -8,7 +8,7 @@ export type CreateEventState =
   | { status: "idle" }
   | { status: "error"; message: string; values: Record<string, string> };
 
-const RESERVED_SLUGS = ["api", "auth", "login", "dashboard", "staff", "admin"];
+const RESERVED_SLUGS = ["api", "auth", "login", "dashboard", "staff", "admin", "legal"];
 
 export async function createEvent(_prev: CreateEventState, formData: FormData): Promise<CreateEventState> {
   const values = Object.fromEntries(

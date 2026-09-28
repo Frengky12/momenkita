@@ -17,7 +17,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 
 const MAX_SESSIONS = 5;
-const RESERVED_SLUGS = ["api", "auth", "login", "dashboard", "staff", "admin"];
+const RESERVED_SLUGS = ["api", "auth", "login", "dashboard", "staff", "admin", "legal"];
 
 const saved = (): SaveState => ({ status: "saved", at: Date.now() });
 const failed = (message: string): SaveState => ({ status: "error", message, at: Date.now() });

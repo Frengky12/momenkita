@@ -48,6 +48,17 @@ export default async function LoginPage(props: PageProps<"/login">) {
         <p className="mt-6 text-center text-sm text-muted-foreground">
           Baru pertama kali? Masukkan email kamu, akun dibuat otomatis.
         </p>
+        <p className="mt-2 text-center text-xs text-muted-foreground">
+          Dengan masuk, kamu menyetujui{" "}
+          <Link href="/legal/syarat" className="underline underline-offset-4">
+            Syarat &amp; Ketentuan
+          </Link>{" "}
+          dan{" "}
+          <Link href="/legal/privasi" className="underline underline-offset-4">
+            Kebijakan Privasi
+          </Link>
+          .
+        </p>
       </div>
     </main>
   );

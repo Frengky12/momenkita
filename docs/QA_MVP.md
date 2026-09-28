@@ -124,6 +124,14 @@ Di Vercel, server berada satu region dengan Supabase (ap-southeast-1), sehingga 
 | Proteksi password bocor | Tidak relevan: login host memakai magic link. |
 | Indeks belum terpakai (16) | Wajar di project dev; tinjau ulang setelah pilot. |
 
+## Dokumen legal
+
+Draf Syarat & Ketentuan (`/legal/syarat`) dan Kebijakan Privasi (`/legal/privasi`) sudah terbit dengan spanduk "Draf". Sebelum go-live:
+
+1. Isi identitas pengelola di `src/lib/legal.ts` (nama badan usaha, alamat, email kontak, kota pengadilan, tanggal berlaku). Spanduk draf hilang otomatis setelah semua terisi.
+2. Tinjau isi oleh ahli hukum, terutama pembagian peran pengendali/prosesor, batas tanggung jawab, dan transfer data ke luar negeri (Singapura, Amerika Serikat).
+3. Komitmen di dokumen yang belum dibangun: email pengingat sebelum album Complete dihapus, dan job penghapusan album setelah 6 bulan. Wajib ada sebelum album pertama mencapai 6 bulan.
+
 ## Harus beres sebelum pilot
 
 1. Domain sendiri untuk deploy Vercel (sekarang `momenkita-hazel.vercel.app`, paket Hobby yang hanya untuk non-komersial): perbarui Site URL Supabase, CORS R2, dan URL notifikasi Midtrans saat domain berganti. Uji webhook Midtrans sungguhan lewat pembayaran sandbox di produksi.

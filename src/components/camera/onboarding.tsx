@@ -81,7 +81,11 @@ export function Onboarding({
         {/* Persetujuan privasi (UU PDP, PRD §9.1): dicatat bersama versi teksnya saat sesi dibuat. */}
         <p className="text-sm text-(--inv-muted)">
           Dengan menekan tombol di bawah, kamu setuju foto yang kamu kirim ditampilkan di layar acara dan galeri event ini. Kamu bisa
-          menghapus fotomu sendiri kapan saja dari halaman ini.
+          menghapus fotomu sendiri kapan saja dari halaman ini. Selengkapnya di{" "}
+          <a href="/legal/privasi" target="_blank" rel="noopener" className="underline underline-offset-4">
+            Kebijakan Privasi
+          </a>
+          .
         </p>
 
         {(error || notice) && (
