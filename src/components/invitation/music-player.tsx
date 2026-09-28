@@ -61,7 +61,7 @@ export function MusicPlayer({ url }: { url: string }) {
           if (el.paused) el.play().catch(() => setFailed(true));
           else el.pause();
         }}
-        className="fixed right-4 bottom-4 z-20 inline-flex size-12 items-center justify-center rounded-full bg-(--inv-button) text-(--inv-text) shadow-md transition-colors hover:bg-(--inv-button-hover) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--inv-text)"
+        className="fixed right-4 bottom-4 z-20 inline-flex size-12 items-center justify-center rounded-full bg-(--inv-button) text-(--inv-button-text) shadow-md transition-colors hover:bg-(--inv-button-hover) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--inv-text)"
       >
         {playing ? (
           <svg viewBox="0 0 24 24" className="size-5" fill="currentColor" aria-hidden>

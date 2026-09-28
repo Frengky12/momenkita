@@ -21,8 +21,8 @@ Disusun dari 5 referensi yang dikirim Product Owner (27 dan 28 Sep 2026). Dokume
 | Elegan klasik | (tema awal MVP) | Ada |
 | Botani | Ref 1 (bunga dan daun di sudut, garis tembaga) dan ref 4 (krem, serif, nuansa alami) | Ada (disetujui PO 28 Sep) |
 | Adat Jawa | Ref 5 (batik, gunungan, melati, gading dan taupe) | Ada |
-| Noir emas | Ref 3 (hitam, garis emas, kaligrafi) | Tertunda |
-| Marun anggun | Ref 2 (marun gelap, kartu foto berbingkai, hitung mundur di kartu kertas) | Tertunda |
+| Noir emas | Ref 3 (hitam, garis emas, kaligrafi) | Ada (menunggu review PO) |
+| Marun anggun | Ref 2 (marun gelap, kartu foto berbingkai, hitung mundur di kartu kertas) | Ada (menunggu review PO) |
 
 ## Botani
 
@@ -48,3 +48,19 @@ Disusun dari 5 referensi yang dikirim Product Owner (27 dan 28 Sep 2026). Dokume
 - **Warna** (kontras dicek WCAG AA): gading `#f8f5ef`, teks `#3a342c` (11.3:1), muted `#675d4f` (5.9:1), aksen `#6f5a41` (6.0:1), tombol putih di atas taupe tua `#6f5d48` (6.3:1). Taupe muda seperti di referensi tidak lolos kontras untuk teks putih, jadi dipakai hanya untuk ornamen.
 - **Huruf:** Playfair Display untuk nama dan judul (serif kontras tinggi seperti ref 5), DM Sans untuk teks isi.
 - **Ornamen:** motif batik kawung pudar sebagai latar, pita kawung di tepi atas dan bawah sampul, sepasang gunungan line-art mengapit foto sampul, untaian melati di bawah foto, pembatas bagian berupa satu bunga kawung.
+
+## Noir emas
+
+- **Dial:** ENERGY 2, RHYTHM 2, MOTION 1. Satu-satunya tema gelap (`color-scheme: dark`).
+- **Warna** (kontras dicek WCAG AA): hitam hangat `#12110f`, kartu `#1c1a17`, teks gading `#ece4d3` (14.9:1), muted `#b3a892` (8.0:1), emas `#d6b56d` (9.6:1), tombol hitam di atas emas (9.6:1), garis isian `#8c7a55` (4.2:1).
+- **Huruf:** Pinyon Script untuk nama mempelai di sampul dan penutup, Cinzel untuk judul, Jost untuk teks isi. Kutipan memakai Cormorant miring karena huruf kecil Cinzel berbentuk kapital kecil dan melelahkan untuk teks panjang.
+- **Ornamen:** bingkai garis ganda di sampul, rangkaian bunga dan daun garis emas di sudut kiri atas dan kanan bawah (kelopak diisi warna latar agar lapisan depan menutup garis di belakangnya), pembatas berupa bunga garis kecil.
+
+## Marun anggun
+
+- **Dial:** ENERGY 3 (paling kaya ornamen), RHYTHM 2, MOTION 1.
+- **Warna** (kontras dicek WCAG AA): marun `#4a1621`, teks `#f7ede2` (12.7:1), muted `#e6cfc3` (9.9:1), emas `#e8c784` (9.1:1), tombol marun di atas emas.
+- **Kartu kertas:** semua permukaan kartu (hitung mundur, acara, RSVP, ucapan, amplop) berwarna kertas `#f8f0e6` dengan token gelapnya sendiri: teks `#3a1a1e` (13.8:1), muted `#6b4a4a` (6.9:1), aksen `#8a2a3a` (7.5:1), tombol putih di atas marun `#7d2636` (9.5:1).
+- **Huruf:** Great Vibes untuk nama mempelai, Bodoni Moda untuk judul, DM Sans untuk teks isi.
+- **Foto:** kartu foto berbingkai kertas (bukan lengkung), segel lilin marun menempel di tepi bawah foto sampul.
+- **Ornamen:** rangkaian anemone merah bergaris krem dengan daun emas di sudut kanan atas dan kiri bawah, bingkai garis emas tipis, pembatas berupa satu anemone kecil.

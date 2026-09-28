@@ -1,4 +1,4 @@
-import { Cormorant_Garamond, DM_Sans, Italiana, Playfair_Display } from "next/font/google";
+import { Bodoni_Moda, Cinzel, Cormorant_Garamond, DM_Sans, Great_Vibes, Italiana, Jost, Pinyon_Script, Playfair_Display } from "next/font/google";
 import type { ThemeId } from "@/lib/invitation/content";
 
 // Satu kerangka undangan, banyak tema (PRD §5.1, docs/DESIGN_UNDANGAN.md): tema hanya menentukan huruf, token warna
@@ -10,12 +10,18 @@ const cormorant = Cormorant_Garamond({ subsets: ["latin"], weight: ["500", "600"
 const italiana = Italiana({ subsets: ["latin"], weight: "400", variable: "--font-italiana", preload: false });
 const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans", preload: false });
 const playfair = Playfair_Display({ subsets: ["latin"], style: ["normal", "italic"], variable: "--font-playfair", preload: false });
+const cinzel = Cinzel({ subsets: ["latin"], variable: "--font-cinzel", preload: false });
+const pinyon = Pinyon_Script({ subsets: ["latin"], weight: "400", variable: "--font-pinyon", preload: false });
+const jost = Jost({ subsets: ["latin"], variable: "--font-jost", preload: false });
+const bodoni = Bodoni_Moda({ subsets: ["latin"], style: ["normal", "italic"], variable: "--font-bodoni", preload: false });
+const greatVibes = Great_Vibes({ subsets: ["latin"], weight: "400", variable: "--font-great-vibes", preload: false });
 
 export type ThemeStyle = {
   rootClass: string;
   // Label kecil di atas nama pada sampul ("Undangan Pernikahan").
   coverLabel: string;
-  photoFrame: "circle" | "arch";
+  // circle: bulat; arch: lengkung; card: kartu foto berbingkai kertas (referensi ke-2).
+  photoFrame: "circle" | "arch" | "card";
   CoverDecor: (() => React.ReactNode) | null;
   // Ornamen yang menempel pada foto sampul berbingkai (bukan pada layar), misalnya gunungan di kiri-kanan foto.
   PhotoDecor: (() => React.ReactNode) | null;
@@ -47,6 +53,22 @@ export const THEME_STYLES: Record<ThemeId, ThemeStyle> = {
     CoverDecor: AdatCoverDecor,
     PhotoDecor: AdatPhotoDecor,
     Divider: AdatDivider,
+  },
+  noir: {
+    rootClass: `theme-noir ${cormorant.variable} ${cinzel.variable} ${pinyon.variable} ${jost.variable}`,
+    coverLabel: "text-sm font-medium tracking-[0.35em] text-(--inv-accent) uppercase",
+    photoFrame: "arch",
+    CoverDecor: NoirCoverDecor,
+    PhotoDecor: null,
+    Divider: NoirDivider,
+  },
+  marun: {
+    rootClass: `theme-marun ${cormorant.variable} ${bodoni.variable} ${greatVibes.variable} ${dmSans.variable}`,
+    coverLabel: "text-sm font-medium tracking-[0.3em] text-(--inv-accent) uppercase",
+    photoFrame: "card",
+    CoverDecor: MarunCoverDecor,
+    PhotoDecor: MarunPhotoDecor,
+    Divider: MarunDivider,
   },
 };
 
@@ -343,6 +365,192 @@ function AdatDivider() {
     <svg viewBox="0 0 120 24" className="h-6 w-28" aria-hidden>
       <path d="M6 12 H46 M74 12 H114" stroke="var(--inv-ornament)" strokeWidth={1} />
       <Kawung x={60} y={12} r={6} />
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Ornamen Noir emas (referensi ke-3): bunga dan daun garis emas di atas hitam, bingkai garis ganda. Kelopak diisi
+// warna latar sehingga lapisan depan menutup garis di belakangnya, seperti gambar tinta satu warna.
+
+// Kelopak berpangkal di titik (0,0), membulat di ujung.
+const petal = (r: number, w: number) => `M0 0 C${-w} ${-r * 0.35} ${-w * 0.85} ${-r} 0 ${-r} C${w * 0.85} ${-r} ${w} ${-r * 0.35} 0 0 Z`;
+
+function LineFlower({ x, y, size = 1, turn = 0 }: { x: number; y: number; size?: number; turn?: number }) {
+  const ring = (count: number, r: number, w: number, offset: number) =>
+    Array.from({ length: count }, (_, i) => (
+      <path key={`${r}-${i}`} transform={`rotate(${offset + (360 / count) * i})`} d={petal(r, w)} />
+    ));
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${turn}) scale(${size})`} fill="var(--inv-bg)" stroke="var(--inv-bloom)" strokeWidth={1}>
+      {ring(7, 26, 13, 0)}
+      {ring(5, 17, 10, 36)}
+      {ring(3, 9, 7, 60)}
+      <circle r={2} fill="var(--inv-bloom)" stroke="none" />
+    </g>
+  );
+}
+
+// Daun panjang runcing dengan tulang daun.
+function LineLeaf({ x, y, angle, scale = 1 }: { x: number; y: number; angle: number; scale?: number }) {
+  return (
+    <g transform={`translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${angle.toFixed(1)}) scale(${scale})`} stroke="var(--inv-leaf)">
+      <path d="M0 0 C14 -8 36 -8 52 0 C36 8 14 8 0 0 Z" fill="var(--inv-bg)" strokeWidth={1} />
+      <path d="M2 0 H48" fill="none" strokeWidth={0.7} />
+    </g>
+  );
+}
+
+// Rangkaian di sudut kiri atas: tangkai melengkung, daun berselang-seling, dua bunga dan satu kuncup.
+function GoldSpray() {
+  const stem: Curve = [
+    { x: 0, y: 0 },
+    { x: 70, y: 20 },
+    { x: 120, y: 70 },
+    { x: 200, y: 110 },
+  ];
+  const d = `M${stem[0].x} ${stem[0].y} C${stem[1].x} ${stem[1].y} ${stem[2].x} ${stem[2].y} ${stem[3].x} ${stem[3].y}`;
+  return (
+    <svg viewBox="-30 -30 260 190" className="h-full w-full overflow-visible" aria-hidden>
+      <path d={d} fill="none" stroke="var(--inv-leaf)" strokeWidth={1.2} strokeLinecap="round" />
+      {[0.12, 0.25, 0.38, 0.52, 0.66, 0.8, 0.92].map((t, i) => {
+        const p = bezier(stem, t);
+        return <LineLeaf key={t} x={p.x} y={p.y} angle={p.angle + (i % 2 ? 38 : -38)} scale={1.05 - t * 0.45} />;
+      })}
+      <LineFlower x={58} y={30} size={1.25} />
+      <LineFlower x={150} y={86} size={0.9} turn={20} />
+      <g transform="translate(206 112) rotate(-60)" fill="var(--inv-bg)" stroke="var(--inv-bloom)" strokeWidth={1}>
+        <path d={petal(16, 8)} />
+        <path d={petal(12, 5)} transform="rotate(-22)" />
+      </g>
+    </svg>
+  );
+}
+
+function NoirCoverDecor() {
+  const box = "pointer-events-none absolute";
+  return (
+    <>
+      {/* Bingkai garis ganda, jarak kecil dari tepi layar. */}
+      <div className={`${box} inset-3 border border-(--inv-ornament)`} />
+      <div className={`${box} inset-[18px] border border-(--inv-ornament) opacity-50`} />
+      <div className={`${box} -top-2 -left-3 w-[clamp(190px,62vw,320px)]`}>
+        <GoldSpray />
+      </div>
+      <div className={`${box} -right-3 -bottom-2 w-[clamp(190px,62vw,320px)] rotate-180`}>
+        <GoldSpray />
+      </div>
+    </>
+  );
+}
+
+function NoirDivider() {
+  return (
+    <svg viewBox="0 0 140 28" className="h-7 w-32" aria-hidden>
+      <path d="M4 14 H52 M88 14 H136" stroke="var(--inv-ornament)" strokeWidth={1} />
+      <circle cx={4} cy={14} r={1.6} fill="var(--inv-ornament)" />
+      <circle cx={136} cy={14} r={1.6} fill="var(--inv-ornament)" />
+      <LineFlower x={70} y={14} size={0.42} />
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Ornamen Marun anggun (referensi ke-2): anemone merah bergaris krem, daun emas, dan segel lilin pada kartu foto.
+
+// Anemone: enam kelopak lebar membulat, pusat gelap dengan benang sari.
+function Anemone({ x, y, size = 1, turn = 0 }: { x: number; y: number; size?: number; turn?: number }) {
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${turn}) scale(${size})`}>
+      {[0, 60, 120, 180, 240, 300].map((a) => (
+        <path
+          key={a}
+          transform={`rotate(${a})`}
+          d="M0 -4 C-15 -8 -17 -27 -6 -31 C-2 -33 2 -33 6 -31 C17 -27 15 -8 0 -4 Z"
+          fill="var(--inv-bloom-fill)"
+          stroke="var(--inv-bloom)"
+          strokeWidth={1}
+        />
+      ))}
+      <circle r={7.5} fill="var(--inv-seal-dark)" stroke="var(--inv-bloom)" strokeWidth={0.8} />
+      {Array.from({ length: 12 }, (_, i) => {
+        const a = (i * 30 * Math.PI) / 180;
+        return <circle key={i} cx={(Math.cos(a) * 10.5).toFixed(2)} cy={(Math.sin(a) * 10.5).toFixed(2)} r={1.1} fill="var(--inv-bloom)" />;
+      })}
+    </g>
+  );
+}
+
+// Rangkaian di sudut kanan atas: tiga anemone, kuncup, dan daun emas runcing.
+function AnemoneCluster() {
+  return (
+    <svg viewBox="-20 -20 240 200" className="h-full w-full overflow-visible" aria-hidden>
+      <path d="M200 0 C150 40 110 60 40 150" fill="none" stroke="var(--inv-leaf)" strokeWidth={1.2} />
+      <path d="M150 38 C120 30 90 36 60 20" fill="none" stroke="var(--inv-leaf)" strokeWidth={1} />
+      <LineLeaf x={170} y={22} angle={200} scale={1.1} />
+      <LineLeaf x={125} y={62} angle={110} scale={1} />
+      <LineLeaf x={95} y={34} angle={170} scale={0.85} />
+      <LineLeaf x={80} y={110} angle={190} scale={0.9} />
+      <Anemone x={150} y={64} size={1.25} turn={10} />
+      <Anemone x={78} y={30} size={0.85} turn={-15} />
+      <Anemone x={60} y={124} size={0.95} turn={25} />
+      <g transform="translate(34 158) rotate(-150)" fill="var(--inv-bloom-fill)" stroke="var(--inv-bloom)" strokeWidth={1}>
+        <path d={petal(18, 9)} />
+        <path d={petal(15, 6)} transform="rotate(20)" />
+      </g>
+    </svg>
+  );
+}
+
+function MarunCoverDecor() {
+  const box = "pointer-events-none absolute";
+  return (
+    <>
+      <div className={`${box} inset-4 border border-(--inv-ornament) opacity-60`} />
+      <div className={`${box} -top-4 -right-6 w-[clamp(180px,58vw,300px)]`}>
+        <AnemoneCluster />
+      </div>
+      <div className={`${box} -bottom-6 -left-10 w-[clamp(150px,46vw,260px)] rotate-180`}>
+        <AnemoneCluster />
+      </div>
+    </>
+  );
+}
+
+// Segel lilin: tepi bergelombang tak beraturan, cincin timbul, dan anemone kecil sebagai cap.
+function WaxSeal() {
+  const edge = Array.from({ length: 24 }, (_, i) => {
+    const a = (i * 15 * Math.PI) / 180;
+    const r = 30 + (i % 3 === 0 ? 3 : i % 2 ? -1 : 1.5);
+    return `${(Math.cos(a) * r).toFixed(1)} ${(Math.sin(a) * r).toFixed(1)}`;
+  });
+  return (
+    <svg viewBox="-36 -36 72 72" className="h-full w-full drop-shadow-md" aria-hidden>
+      <path d={`M${edge.join(" L")} Z`} fill="var(--inv-seal)" strokeLinejoin="round" stroke="var(--inv-seal)" strokeWidth={4} />
+      <circle r={21} fill="none" stroke="var(--inv-seal-dark)" strokeWidth={1.4} />
+      <circle r={18.5} fill="none" stroke="var(--inv-seal-light)" strokeWidth={0.8} />
+      {[0, 60, 120, 180, 240, 300].map((a) => (
+        <path key={a} transform={`rotate(${a})`} d={petal(12, 6)} fill="none" stroke="var(--inv-seal-light)" strokeWidth={1} />
+      ))}
+      <circle r={2.4} fill="var(--inv-seal-light)" />
+    </svg>
+  );
+}
+
+// Segel lilin menempel di tepi bawah kartu foto sampul.
+function MarunPhotoDecor() {
+  return (
+    <div className="pointer-events-none absolute -bottom-9 left-1/2 z-10 size-18 -translate-x-1/2">
+      <WaxSeal />
+    </div>
+  );
+}
+
+function MarunDivider() {
+  return (
+    <svg viewBox="0 0 140 30" className="h-7 w-32 overflow-visible" aria-hidden>
+      <path d="M4 15 H54 M86 15 H136" stroke="var(--inv-ornament)" strokeWidth={1} />
+      <Anemone x={70} y={15} size={0.36} />
     </svg>
   );
 }

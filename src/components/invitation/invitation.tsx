@@ -6,7 +6,7 @@ import { Gallery } from "@/components/invitation/gallery";
 import { MarkOpened } from "@/components/invitation/mark-opened";
 import { MusicPlayer } from "@/components/invitation/music-player";
 import { RsvpForm } from "@/components/invitation/rsvp-form";
-import { THEME_STYLES } from "@/components/invitation/themes";
+import { THEME_STYLES, type ThemeStyle } from "@/components/invitation/themes";
 import { QrCode } from "@/components/qr-code";
 import { TIMEZONE_LABELS, coupleNames, formatDate, formatTime, type EventTimezone, type Person } from "@/lib/invitation/content";
 import { googleCalendarUrl, mapsUrl, wazeUrl } from "@/lib/invitation/links";
@@ -100,7 +100,7 @@ export function Invitation({
         {!fullCover && media.cover && (
           <div className={cn("relative isolate", PhotoDecor && "mb-6")}>
             {PhotoDecor && <PhotoDecor />}
-            {/* Bingkai lengkung khas undangan cetak; foto dipotong ke rasio 4:5 agar sampul tetap muat satu layar HP. */}
+            {/* Bingkai khas undangan cetak; foto dipotong ke rasio 4:5 agar sampul tetap muat satu layar HP. */}
             {/* eslint-disable-next-line @next/next/no-img-element -- signed URL R2 */}
             <img
               src={media.cover.url}
@@ -109,16 +109,18 @@ export function Invitation({
               height={media.cover.height}
               fetchPriority="high"
               className={cn(
-                "aspect-[4/5] w-auto rounded-t-full object-cover",
-                style.photoFrame === "arch"
-                  ? "h-[40dvh] max-h-[24rem] outline-1 outline-offset-6 outline-(--inv-ornament)"
-                  : "h-[46dvh] max-h-[28rem] border-4 border-(--inv-card) shadow-sm",
+                "aspect-[4/5] w-auto object-cover",
+                {
+                  arch: "h-[40dvh] max-h-[24rem] rounded-t-full outline-1 outline-offset-6 outline-(--inv-ornament)",
+                  circle: "h-[46dvh] max-h-[28rem] rounded-t-full border-4 border-(--inv-card) shadow-sm",
+                  card: "h-[40dvh] max-h-[24rem] border-8 border-(--inv-card) shadow-lg outline-1 outline-offset-6 outline-(--inv-ornament)",
+                }[style.photoFrame],
               )}
             />
           </div>
         )}
         <p className={style.coverLabel}>Undangan Pernikahan</p>
-        <h1 className="font-display text-5xl leading-tight font-semibold [overflow-wrap:anywhere] sm:text-6xl">
+        <h1 className="font-script text-5xl leading-tight font-semibold [overflow-wrap:anywhere] sm:text-6xl">
           {first.nickname}
           <span className="mx-3 italic text-(--inv-accent)">&amp;</span>
           {second.nickname}
@@ -335,7 +337,7 @@ export function Invitation({
         <section className="flex flex-col items-center gap-6 text-center">
           <Divider />
           {content.texts.closing && <p className="leading-relaxed whitespace-pre-line">{content.texts.closing}</p>}
-          <p className="font-display text-4xl font-semibold">
+          <p className="font-script text-4xl font-semibold">
             {first.nickname} <span className="italic text-(--inv-accent)">&amp;</span> {second.nickname}
           </p>
         </section>
@@ -380,7 +382,7 @@ function SectionTitle({ id, Divider, children }: { id: string; Divider: () => Re
   );
 }
 
-function Profile({ person, role, photo, frame }: { person: Person; role: "Putra" | "Putri"; photo: MediaItem | null; frame: "circle" | "arch" }) {
+function Profile({ person, role, photo, frame }: { person: Person; role: "Putra" | "Putri"; photo: MediaItem | null; frame: ThemeStyle["photoFrame"] }) {
   const parents = [person.father, person.mother].filter(Boolean).join(" & ");
   return (
     <div className="flex flex-col items-center gap-2">
@@ -393,9 +395,11 @@ function Profile({ person, role, photo, frame }: { person: Person; role: "Putra"
           height={photo.height}
           loading="lazy"
           className={
-            frame === "arch"
-              ? "mb-4 aspect-[3/4] w-40 rounded-t-full object-cover outline-1 outline-offset-4 outline-(--inv-ornament)"
-              : "mb-2 size-40 rounded-full border-4 border-(--inv-card) object-cover shadow-sm"
+            {
+              arch: "mb-4 aspect-[3/4] w-40 rounded-t-full object-cover outline-1 outline-offset-4 outline-(--inv-ornament)",
+              circle: "mb-2 size-40 rounded-full border-4 border-(--inv-card) object-cover shadow-sm",
+              card: "mb-4 aspect-[3/4] w-40 border-[6px] border-(--inv-card) object-cover shadow-md outline-1 outline-offset-4 outline-(--inv-ornament)",
+            }[frame]
           }
         />
       )}

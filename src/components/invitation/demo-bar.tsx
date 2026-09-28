@@ -19,7 +19,7 @@ export function DemoBar({ slug, view }: { slug: string; view: DemoView }) {
     );
 
   return (
-    <nav aria-label="Pilihan tampilan contoh" className="sticky top-0 z-30 bg-stone-900 text-white">
+    <nav aria-label="Pilihan tampilan contoh" className="sticky top-0 z-30 border-b border-white/15 bg-stone-900 text-white">
       <div className="mx-auto flex max-w-3xl items-center gap-2 overflow-x-auto px-3 py-1.5">
         <span className="shrink-0 pr-1 text-xs text-stone-300">Contoh · Tema</span>
         {(Object.keys(THEMES) as ThemeId[]).map((theme) => (

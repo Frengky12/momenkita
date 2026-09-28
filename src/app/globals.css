@@ -11,6 +11,8 @@
   --font-heading: var(--font-sans);
   /* Tema undangan boleh mengganti huruf dekoratifnya lewat --inv-font-display; halaman lain tetap Cormorant. */
   --font-display: var(--inv-font-display, var(--font-cormorant));
+  /* Huruf nama mempelai di sampul dan penutup; tema tanpa huruf kaligrafi memakai huruf dekoratifnya. */
+  --font-script: var(--inv-font-script, var(--inv-font-display, var(--font-cormorant)));
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -201,6 +203,100 @@
   /* Batik kawung: empat kelopak lonjong menghadap satu titik, berulang diagonal. Sangat pudar agar teks tetap bersih. */
   background-image: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2748%27 height=%2748%27%3E%3Cg fill=%27none%27 stroke=%27%23b7a684%27 stroke-opacity=%27.28%27 stroke-width=%27.8%27%3E%3Cellipse cx=%2714%27 cy=%2714%27 rx=%2710%27 ry=%275.2%27 transform=%27rotate(45 14 14)%27/%3E%3Cellipse cx=%2734%27 cy=%2714%27 rx=%2710%27 ry=%275.2%27 transform=%27rotate(-45 34 14)%27/%3E%3Cellipse cx=%2714%27 cy=%2734%27 rx=%2710%27 ry=%275.2%27 transform=%27rotate(-45 14 34)%27/%3E%3Cellipse cx=%2734%27 cy=%2734%27 rx=%2710%27 ry=%275.2%27 transform=%27rotate(45 34 34)%27/%3E%3C/g%3E%3Cg fill=%27%23b7a684%27 fill-opacity=%27.3%27%3E%3Ccircle cx=%2724%27 cy=%2724%27 r=%271.4%27/%3E%3Ccircle cx=%270%27 cy=%270%27 r=%271.4%27/%3E%3Ccircle cx=%2748%27 cy=%270%27 r=%271.4%27/%3E%3Ccircle cx=%270%27 cy=%2748%27 r=%271.4%27/%3E%3Ccircle cx=%2748%27 cy=%2748%27 r=%271.4%27/%3E%3C/g%3E%3C/svg%3E");
   color-scheme: light;
+}
+
+/* Tema "Noir emas" (referensi ke-3, docs/DESIGN_UNDANGAN.md): hitam hangat, garis emas, nama kaligrafi.
+   Satu-satunya tema gelap, jadi color-scheme gelap agar kontrol bawaan (select, scrollbar) ikut gelap.
+   Kontras dicek AA: teks 14.9:1, muted 8.0:1, emas 9.6:1 (di kartu 8.8:1), tombol hitam di atas emas 9.6:1,
+   garis kolom isian 4.2:1 (minimal 3:1 untuk batas kontrol). */
+.theme-noir {
+  --inv-bg: #12110f;
+  --inv-card: #1c1a17;
+  --inv-text: #ece4d3;
+  --inv-muted: #b3a892;
+  --inv-accent: #d6b56d;
+  --inv-ornament: #b8975a;
+  --inv-leaf: #a88a52;
+  --inv-leaf-fill: #12110f;
+  --inv-bloom: #d6b56d;
+  --inv-bloom-fill: #12110f;
+  --inv-line: #37322a;
+  --inv-field: #8c7a55;
+  --inv-button: #d6b56d;
+  --inv-button-hover: #e3c686;
+  --inv-button-text: #12110f;
+  --inv-band: #2a261f;
+  --inv-error: #f0a39a;
+  --inv-font-display: var(--font-cinzel);
+  --inv-font-script: var(--font-pinyon);
+  font-family: var(--font-jost), var(--font-sans), sans-serif;
+  color-scheme: dark;
+}
+/* Cinzel tidak punya miring dan Pinyon Script hanya satu ketebalan: cegah miring dan tebal palsu. */
+.theme-noir .font-display {
+  font-style: normal;
+}
+/* Huruf kecil Cinzel berbentuk kapital kecil, melelahkan untuk kutipan panjang; kutipan memakai Cormorant miring. */
+.theme-noir blockquote.font-display {
+  font-family: var(--font-cormorant), serif;
+  font-style: italic;
+}
+.theme-noir .font-script,
+.theme-noir .font-script * {
+  font-weight: 400;
+  font-style: normal;
+}
+
+/* Tema "Marun anggun" (referensi ke-2, docs/DESIGN_UNDANGAN.md): marun tua, emas, anemone merah, dan isi di atas
+   kartu kertas terang. Kontras dicek AA: di atas marun teks 12.7:1, muted 9.9:1, emas 9.1:1, tombol marun di atas
+   emas 9.1:1; di dalam kartu teks 13.8:1, muted 6.9:1, aksen 7.5:1, tombol putih di atas marun 9.5:1, garis isian 3.4:1.
+   Segel lilin dan anemone hanya dekorasi. */
+.theme-marun {
+  --inv-bg: #4a1621;
+  --inv-card: #f8f0e6;
+  --inv-text: #f7ede2;
+  --inv-muted: #e6cfc3;
+  --inv-accent: #e8c784;
+  --inv-ornament: #c9a063;
+  --inv-leaf: #c9a063;
+  --inv-leaf-fill: #4a1621;
+  --inv-bloom: #f3d9c4;
+  --inv-bloom-fill: #a8283b;
+  --inv-seal: #8f1d2e;
+  --inv-seal-dark: #5a0f1b;
+  --inv-seal-light: #c95a68;
+  --inv-line: #6e3440;
+  --inv-field: #c9a063;
+  --inv-button: #e8c784;
+  --inv-button-hover: #f0d59c;
+  --inv-button-text: #4a1621;
+  --inv-band: #5c1d29;
+  --inv-error: #ffc2c2;
+  --inv-font-display: var(--font-bodoni);
+  --inv-font-script: var(--font-great-vibes);
+  font-family: var(--font-dm-sans), var(--font-sans), sans-serif;
+  color-scheme: dark;
+}
+/* Kartu kertas: setiap permukaan bg-(--inv-card) memakai token terangnya sendiri, sehingga teks, garis, dan tombol
+   di dalamnya berganti ke warna gelap tanpa mengubah komponen. */
+.theme-marun .bg-\(--inv-card\) {
+  --inv-text: #3a1a1e;
+  --inv-muted: #6b4a4a;
+  --inv-accent: #8a2a3a;
+  --inv-line: #e3d3c2;
+  --inv-field: #9a7d72;
+  --inv-band: #efe3d4;
+  --inv-button: #7d2636;
+  --inv-button-hover: #651d2b;
+  --inv-button-text: #ffffff;
+  --inv-error: #9b2c2c;
+  color: var(--inv-text);
+  color-scheme: light;
+}
+.theme-marun .font-script,
+.theme-marun .font-script * {
+  font-weight: 400;
+  font-style: normal;
 }
 
 /* Italiana hanya punya satu ketebalan tanpa miring; cegah tebal dan miring palsu dari kelas bersama. */
