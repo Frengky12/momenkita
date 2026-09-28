@@ -359,6 +359,12 @@ await as(hostA, `delete from public.invitation_media where kind = 'music'`)
 await expectErr('music with a thumbnail is rejected', insertMusic(hostA, 'm4', 'm4/thumb.webp'), /invitation_media_shape/)
 await expectErr('photos still need dimensions', as(hostA, `insert into public.invitation_media (event_id, kind, key_display, key_thumb, bytes_display)
   values ($1, 'bride', $2, $3, 1000)`, [ev.id, mediaKey('b1/display.webp'), mediaKey('b1/thumb.webp')]), /invitation_media_shape/)
+await expectErr('story photo needs dimensions', as(hostA, `insert into public.invitation_media (event_id, kind, key_display, key_thumb, bytes_display)
+  values ($1, 'story', $2, $3, 1000)`, [ev.id, mediaKey('s9/display.webp'), mediaKey('s9/thumb.webp')]), /invitation_media_shape/)
+await expectErr('outsider cannot add story photo', insertMedia(latecomer, 'story', 'story7'), /row-level security/)
+for (let i = 0; i < 6; i++) await insertMedia(i % 2 ? hostB : hostA, 'story', `story${i}`)
+check('story photos allow several per event', (await as(hostA, `select id from public.invitation_media where kind = 'story'`)).length === 6)
+await expectErr('story photos limited to 6', insertMedia(hostA, 'story', 'story6'), /maksimal 6/)
 
 console.log('\n# account deletion')
 const leaver = { id: await mkUser('leaver@x.id') }

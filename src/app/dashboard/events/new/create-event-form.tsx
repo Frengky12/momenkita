@@ -29,7 +29,11 @@ export function CreateEventForm({ origin }: { origin: string }) {
         </Field>
       </div>
 
-      <Field label="Alamat undangan" htmlFor="slug" hint={`${origin}/${shownSlug || "..."}`}>
+      <Field
+        label="Alamat link undangan"
+        htmlFor="slug"
+        hint={`Link yang dibagikan ke tamu: ${origin}/${shownSlug || "nama-kalian"}. Bukan alamat lokasi acara.`}
+      >
         <Input
           id="slug"
           name="slug"

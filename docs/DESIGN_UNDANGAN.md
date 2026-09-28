@@ -40,7 +40,7 @@ Disusun dari 5 referensi yang dikirim Product Owner (27 dan 28 Sep 2026). Dokume
 
 - **Gaya sampul** dipilih host: foto berbingkai (ornamen tema) atau foto penuh layar (teks putih di atas gradasi gelap minimal 55% hitam di area teks; ornamen sampul disembunyikan).
 - **Monogram inisial** ("R | N") di pembuka bagian mempelai, dari huruf pertama nama panggilan.
-- **Kisah Kami (Love Story)**: garis waktu maksimal 6 bab (judul, waktu opsional, cerita). Teks saja; foto per bab bisa ditambah nanti.
+- **Kisah Kami (Love Story)**: garis waktu maksimal 6 bab (judul, waktu opsional, cerita, satu foto opsional per bab). Foto bab tersimpan sebagai invitation_media berjenis story dan ditautkan lewat id bab, jadi tetap ikut babnya saat bab lain dihapus.
 
 ## Adat Jawa
 

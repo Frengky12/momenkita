@@ -8,6 +8,7 @@ import {
   MAX_GIFT_ACCOUNTS,
   MAX_STORY_CHAPTERS,
   STORY_LIMITS,
+  STORY_ID_PATTERN,
   THEMES,
   parseContent,
   slugify,
@@ -16,6 +17,7 @@ import {
   type Person,
   type ThemeId,
 } from "@/lib/invitation/content";
+import { deleteStoryPhotos } from "@/lib/invitation/media";
 import { createClient } from "@/lib/supabase/server";
 
 const MAX_SESSIONS = 5;
@@ -106,12 +108,27 @@ export async function saveTheme(eventId: string, _prev: SaveState, formData: For
 // Bab yang dikosongkan semua isiannya dianggap dihapus; urutan mengikuti urutan di form.
 export async function saveStory(eventId: string, _prev: SaveState, formData: FormData): Promise<SaveState> {
   const chapters = Array.from({ length: MAX_STORY_CHAPTERS }, (_, i) => ({
+    id: field(formData, `story.${i}.id`),
     title: field(formData, `story.${i}.title`).slice(0, STORY_LIMITS.title),
     when: field(formData, `story.${i}.when`).slice(0, STORY_LIMITS.when),
     text: field(formData, `story.${i}.text`).slice(0, STORY_LIMITS.text),
   })).filter((c) => c.title || c.when || c.text);
   if (chapters.some((c) => !c.title || !c.text)) return failed("Setiap bab perlu judul dan cerita. Kosongkan semua isian bab untuk menghapusnya.");
-  return updateContent(eventId, (c) => ({ ...c, story: chapters }));
+
+  // Foto bab dibaca dari data tersimpan (bukan dari form) lewat id bab, jadi foto yang baru diunggah tidak tertimpa.
+  let orphans: string[] = [];
+  const result = await updateContent(eventId, (c) => {
+    const existing = new Map(c.story.map((chapter) => [chapter.id, chapter]));
+    const story = chapters.map(({ id, ...rest }) => {
+      const previous = STORY_ID_PATTERN.test(id) ? existing.get(id) : undefined;
+      existing.delete(id);
+      return { ...rest, id: previous ? id : crypto.randomUUID(), photo: previous?.photo ?? null };
+    });
+    orphans = [...existing.values()].flatMap((chapter) => (chapter.photo ? [chapter.photo] : []));
+    return { ...c, story };
+  });
+  if (result.status === "saved" && orphans.length) await deleteStoryPhotos(await createClient(), eventId, orphans);
+  return result;
 }
 
 export async function saveSettings(eventId: string, _prev: SaveState, formData: FormData): Promise<SaveState> {

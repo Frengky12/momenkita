@@ -178,14 +178,28 @@ export function Invitation({
               Kisah Kami
             </SectionTitle>
             <ol className="flex flex-col gap-10 border-l border-(--inv-ornament) pl-6">
-              {content.story.map((chapter, i) => (
-                <li key={i} className="relative flex flex-col gap-2">
-                  <span aria-hidden className="absolute top-2 -left-[30.5px] size-3 rounded-full border border-(--inv-ornament) bg-(--inv-bg)" />
-                  {chapter.when && <p className="text-sm tracking-wide text-(--inv-muted) uppercase">{chapter.when}</p>}
-                  <h3 className="font-display text-2xl font-semibold">{chapter.title}</h3>
-                  <p className="leading-relaxed whitespace-pre-line">{chapter.text}</p>
-                </li>
-              ))}
+              {content.story.map((chapter) => {
+                const photo = media.story.find((m) => m.id === chapter.photo);
+                return (
+                  <li key={chapter.id} className="relative flex flex-col gap-2">
+                    <span aria-hidden className="absolute top-2 -left-[30.5px] size-3 rounded-full border border-(--inv-ornament) bg-(--inv-bg)" />
+                    {photo && (
+                      // eslint-disable-next-line @next/next/no-img-element -- signed URL R2
+                      <img
+                        src={photo.url}
+                        alt={`Foto bab ${chapter.title}`}
+                        width={photo.width}
+                        height={photo.height}
+                        loading="lazy"
+                        className="mb-2 aspect-[4/3] w-full rounded-lg border border-(--inv-line) object-cover"
+                      />
+                    )}
+                    {chapter.when && <p className="text-sm tracking-wide text-(--inv-muted) uppercase">{chapter.when}</p>}
+                    <h3 className="font-display text-2xl font-semibold">{chapter.title}</h3>
+                    <p className="leading-relaxed whitespace-pre-line">{chapter.text}</p>
+                  </li>
+                );
+              })}
             </ol>
           </section>
         )}

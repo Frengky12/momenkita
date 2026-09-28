@@ -2,7 +2,8 @@
 
 import { refresh } from "next/cache";
 import { GALLERY_MAX, MUSIC_MAX_BYTES, isMediaKind, isMusicType, type MediaKind, type MusicType } from "@/lib/invitation/media-kinds";
-import { mediaKeys, musicKey } from "@/lib/invitation/media";
+import { STORY_ID_PATTERN, parseContent } from "@/lib/invitation/content";
+import { deleteStoryPhotos, mediaKeys, musicKey } from "@/lib/invitation/media";
 import { deleteObjects, headObject, presignPut } from "@/lib/r2";
 import { reportError } from "@/lib/report-error";
 import { createClient } from "@/lib/supabase/server";
@@ -84,19 +85,97 @@ export async function confirmMediaUpload(
   format: DisplayType,
   dimensions: { width: number; height: number },
 ): Promise<Result> {
-  if (!UUID_PATTERN.test(mediaId) || !isPhotoKind(kind) || !isDisplayType(format)) return { ok: false, message: "Data unggahan tidak valid." };
+  // Foto bab punya langkah simpan sendiri (confirmStoryPhoto) karena harus ditautkan ke babnya.
+  if (!UUID_PATTERN.test(mediaId) || !isPhotoKind(kind) || kind === "story" || !isDisplayType(format)) return { ok: false, message: "Data unggahan tidak valid." };
+  const supabase = await managedEvent(eventId);
+  if (!supabase) return NO_ACCESS;
+  const row = await uploadedRow(eventId, mediaId, format, dimensions);
+  if (!row.ok) return row;
+  return saveRow(supabase, eventId, kind, row.row, keysOf(row.row));
+}
+
+// Memastikan kedua file foto benar-benar ada di R2 dan sesuai format, lalu menyusun baris yang akan dicatat.
+async function uploadedRow(eventId: string, mediaId: string, format: DisplayType, dimensions: { width: number; height: number }): Promise<Result<{ row: Row }>> {
   const width = Math.round(dimensions.width);
   const height = Math.round(dimensions.height);
   if (!(width > 0 && height > 0 && width <= 4000 && height <= 4000)) return { ok: false, message: "Ukuran foto tidak valid." };
-  const supabase = await managedEvent(eventId);
-  if (!supabase) return NO_ACCESS;
-
   const keys = mediaKeys(eventId, mediaId, format);
   const [display, thumb] = await Promise.all([headObject(keys.display), headObject(keys.thumb)]);
   if (!display || !thumb || display.contentType !== format || thumb.contentType !== format) {
     return { ok: false, message: "Unggahan belum lengkap. Coba unggah lagi." };
   }
-  return saveRow(supabase, eventId, kind, { key_display: keys.display, key_thumb: keys.thumb, width, height, bytes_display: display.size }, [keys.display, keys.thumb]);
+  return { ok: true, row: { key_display: keys.display, key_thumb: keys.thumb, width, height, bytes_display: display.size } };
+}
+
+async function loadStory(supabase: Client, eventId: string) {
+  const { data } = await supabase.from("events").select("theme_config").eq("id", eventId).maybeSingle();
+  return data ? parseContent(data.theme_config) : null;
+}
+
+// Foto bab langkah 2. Bab yang sudah berfoto: baris lamanya diperbarui (id tetap, file lama dihapus), sehingga batas
+// 6 foto tidak menghalangi penggantian. Bab tanpa foto: baris baru dibuat lalu id-nya disimpan di bab.
+export async function confirmStoryPhoto(
+  eventId: string,
+  mediaId: string,
+  chapterId: string,
+  format: DisplayType,
+  dimensions: { width: number; height: number },
+): Promise<Result> {
+  if (!UUID_PATTERN.test(mediaId) || !STORY_ID_PATTERN.test(chapterId) || !isDisplayType(format)) return { ok: false, message: "Data unggahan tidak valid." };
+  const supabase = await managedEvent(eventId);
+  if (!supabase) return NO_ACCESS;
+  const uploaded = await uploadedRow(eventId, mediaId, format, dimensions);
+  if (!uploaded.ok) return uploaded;
+  const newKeys = keysOf(uploaded.row);
+  const discard = async (message: string): Promise<Result> => {
+    await deleteObjects(newKeys).catch(() => undefined);
+    return { ok: false, message };
+  };
+
+  const content = await loadStory(supabase, eventId);
+  const chapter = content?.story.find((c) => c.id === chapterId);
+  if (!content || !chapter) return discard("Bab tidak ditemukan. Muat ulang halaman lalu coba lagi.");
+
+  if (chapter.photo) {
+    const { data: old } = await supabase.from("invitation_media").select("key_display, key_thumb").eq("id", chapter.photo).eq("kind", "story").maybeSingle();
+    if (old) {
+      const { error } = await supabase.from("invitation_media").update(uploaded.row).eq("id", chapter.photo);
+      if (error) return discard("Foto gagal disimpan. Coba lagi.");
+      await deleteObjects(keysOf(old)).catch((e) => reportError("Foto bab lama gagal dihapus dari R2", e, { eventId }));
+      refresh();
+      return { ok: true };
+    }
+  }
+
+  const { data: inserted, error } = await supabase
+    .from("invitation_media")
+    .insert({ event_id: eventId, kind: "story", ...uploaded.row })
+    .select("id")
+    .single();
+  if (error || !inserted) return discard(error?.message.includes("maksimal") ? "Foto bab sudah 6. Hapus salah satu dulu." : "Foto gagal disimpan. Coba lagi.");
+  const story = content.story.map((c) => (c.id === chapterId ? { ...c, photo: inserted.id } : c));
+  const { error: linkError } = await supabase.from("events").update({ theme_config: { ...content, story } }).eq("id", eventId);
+  if (linkError) {
+    await deleteStoryPhotos(supabase, eventId, [inserted.id]);
+    return { ok: false, message: "Foto gagal disimpan. Coba lagi." };
+  }
+  refresh();
+  return { ok: true };
+}
+
+export async function removeStoryPhoto(eventId: string, chapterId: string): Promise<Result> {
+  if (!STORY_ID_PATTERN.test(chapterId)) return { ok: false, message: "Data tidak valid." };
+  const supabase = await managedEvent(eventId);
+  if (!supabase) return NO_ACCESS;
+  const content = await loadStory(supabase, eventId);
+  const photo = content?.story.find((c) => c.id === chapterId)?.photo;
+  if (!content || !photo) return { ok: false, message: "Foto tidak ditemukan. Muat ulang halaman lalu coba lagi." };
+  const story = content.story.map((c) => (c.id === chapterId ? { ...c, photo: null } : c));
+  const { error } = await supabase.from("events").update({ theme_config: { ...content, story } }).eq("id", eventId);
+  if (error) return { ok: false, message: "Foto gagal dihapus. Coba lagi." };
+  await deleteStoryPhotos(supabase, eventId, [photo]);
+  refresh();
+  return { ok: true };
 }
 
 // Musik langkah 1. Host wajib menyatakan berhak memakai lagunya (PRD §5.1: hak cipta tanggung jawab host).

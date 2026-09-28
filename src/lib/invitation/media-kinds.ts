@@ -6,6 +6,7 @@ export const MEDIA_KINDS = {
   groom: { label: "Foto mempelai pria", hint: "Potret setengah badan atau wajah." },
   bride: { label: "Foto mempelai wanita", hint: "Potret setengah badan atau wajah." },
   gallery: { label: "Galeri prewedding", hint: `Maksimal ${GALLERY_MAX} foto.` },
+  story: { label: "Foto bab", hint: "Satu foto untuk bab ini, tampil di atas ceritanya." },
   qris: { label: "Gambar QRIS amplop digital", hint: "Tangkapan layar atau foto kode QRIS. Tampil di bagian amplop digital." },
   music: { label: "Musik latar", hint: "Satu lagu MP3, M4A, atau AAC, maksimal 8 MB. Mulai diputar saat tamu menekan Buka undangan." },
 } as const;

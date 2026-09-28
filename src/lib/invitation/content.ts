@@ -13,8 +13,11 @@ export type ThemeId = keyof typeof THEMES;
 
 export type Person = { nickname: string; fullName: string; father: string; mother: string; instagram: string };
 
-// Love Story (teks saja): bab berurutan, misalnya "Awal bertemu", "Lamaran".
-export type StoryChapter = { title: string; when: string; text: string };
+// Love Story: bab berurutan, misalnya "Awal bertemu", "Lamaran". id tetap walau bab lain dihapus atau bergeser,
+// sehingga foto bab (photo = id baris invitation_media berjenis story) selalu ikut babnya.
+export type StoryChapter = { id: string; title: string; when: string; text: string; photo: string | null };
+export const STORY_ID_PATTERN = /^[\w-]{1,40}$/;
+const MEDIA_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 // Sampul "frame": foto dalam bingkai tema; "full": foto menutupi layar dengan teks di bagian bawah.
 export type CoverStyle = "frame" | "full";
 
@@ -83,9 +86,16 @@ export function parseContent(raw: unknown): InvitationContent {
     theme: typeof v.theme === "string" && v.theme in THEMES ? (v.theme as ThemeId) : "klasik",
     coverStyle: v.coverStyle === "full" ? "full" : "frame",
     story: (Array.isArray(v.story) ? v.story : [])
-      .map((c) => {
+      .map((c, i) => {
         const chapter = (c ?? {}) as Record<string, unknown>;
-        return { title: text(chapter.title, STORY_LIMITS.title), when: text(chapter.when, STORY_LIMITS.when), text: text(chapter.text, STORY_LIMITS.text) };
+        return {
+          // Bab lama (sebelum ada id) memakai urutannya; id ini ikut tersimpan saat bab disimpan ulang.
+          id: typeof chapter.id === "string" && STORY_ID_PATTERN.test(chapter.id) ? chapter.id : `bab-${i}`,
+          title: text(chapter.title, STORY_LIMITS.title),
+          when: text(chapter.when, STORY_LIMITS.when),
+          text: text(chapter.text, STORY_LIMITS.text),
+          photo: typeof chapter.photo === "string" && MEDIA_ID_PATTERN.test(chapter.photo) ? chapter.photo : null,
+        };
       })
       .filter((c) => c.title && c.text)
       .slice(0, MAX_STORY_CHAPTERS),

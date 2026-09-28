@@ -2,38 +2,29 @@
 
 import { useId, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { processPhoto } from "@/lib/camera/processor";
 import { GALLERY_MAX, MEDIA_KINDS, MUSIC_MAX_BYTES, musicTypeOf, type MediaKind } from "@/lib/invitation/media-kinds";
 import type { InvitationMedia, MediaItem, MusicItem } from "@/lib/invitation/media";
-import { confirmMediaUpload, confirmMusicUpload, deleteMedia, prepareMediaUpload, prepareMusicUpload } from "./media-actions";
+import { confirmMediaUpload, confirmMusicUpload, deleteMedia, prepareMusicUpload } from "./media-actions";
+import { uploadPhoto } from "./upload-photo";
 
 type Status = { kind: MediaKind; text: string; error?: boolean } | null;
 
-// Foto dikompres di browser dengan pipeline yang sama dengan kamera tamu (putar EXIF, WebP/JPEG, ≤ 400 KB),
-// lalu diunggah langsung ke R2 lewat URL bertanda tangan. Server tidak pernah menerima file mentah.
+// Foto dikompres di browser lalu diunggah langsung ke R2 (upload-photo.ts). Foto bab dikelola di bagian Love Story.
 export function MediaManager({ eventId, media }: { eventId: string; media: InvitationMedia }) {
   const [status, setStatus] = useState<Status>(null);
   const busy = status !== null && !status.error;
 
-  async function upload(kind: Exclude<MediaKind, "music">, files: File[]) {
+  async function upload(kind: Exclude<MediaKind, "music" | "story">, files: File[]) {
     for (const [index, file] of files.entries()) {
       const counter = files.length > 1 ? ` (${index + 1}/${files.length})` : "";
-      try {
-        setStatus({ kind, text: `Memproses foto${counter}...` });
-        const out = await processPhoto({ source: file, filter: "asli", wantOriginal: false });
-        setStatus({ kind, text: `Mengunggah${counter}...` });
-        const prepared = await prepareMediaUpload(eventId, kind, out.format, { display: out.display.size, thumb: out.thumb.size });
-        if (!prepared.ok) return setStatus({ kind, text: prepared.message, error: true });
-        const puts = await Promise.all([
-          fetch(prepared.displayUrl, { method: "PUT", headers: { "Content-Type": out.format }, body: out.display }),
-          fetch(prepared.thumbUrl, { method: "PUT", headers: { "Content-Type": out.format }, body: out.thumb }),
-        ]);
-        if (puts.some((r) => !r.ok)) return setStatus({ kind, text: "Unggahan gagal. Periksa koneksi lalu coba lagi.", error: true });
-        const confirmed = await confirmMediaUpload(eventId, prepared.mediaId, kind, out.format, { width: out.width, height: out.height });
-        if (!confirmed.ok) return setStatus({ kind, text: confirmed.message, error: true });
-      } catch {
-        return setStatus({ kind, text: "Foto tidak bisa dibaca. Pilih file gambar JPG, PNG, WebP, atau HEIC.", error: true });
-      }
+      const result = await uploadPhoto(
+        eventId,
+        kind,
+        file,
+        (step) => setStatus({ kind, text: step === "process" ? `Memproses foto${counter}...` : `Mengunggah${counter}...` }),
+        (mediaId, format, dimensions) => confirmMediaUpload(eventId, mediaId, kind, format, dimensions),
+      );
+      if (!result.ok) return setStatus({ kind, text: result.message, error: true });
     }
     setStatus(null);
   }
@@ -63,7 +54,7 @@ export function MediaManager({ eventId, media }: { eventId: string; media: Invit
     setStatus(result.ok ? null : { kind, text: result.message, error: true });
   }
 
-  const single = (kind: Exclude<MediaKind, "gallery" | "music">) => (
+  const single = (kind: Exclude<MediaKind, "gallery" | "music" | "story">) => (
     <Slot
       kind={kind}
       items={media[kind] ? [media[kind]] : []}

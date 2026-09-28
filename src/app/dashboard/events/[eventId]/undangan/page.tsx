@@ -18,16 +18,18 @@ import {
   type Person,
 } from "@/lib/invitation/content";
 import { loadMedia } from "@/lib/invitation/media";
+import { requestOrigin } from "@/lib/invitation/origin";
 import { createClient } from "@/lib/supabase/server";
 import { deleteDraftEvent, deleteSession, saveCouple, saveGifts, saveSession, saveSettings, saveStory, saveTexts, saveTheme } from "../actions";
 import { MediaManager } from "./media-manager";
+import { StoryPhoto } from "./story-photo";
 
 type Session = { id: string; name: string; starts_at: string; ends_at: string; venue_name: string | null; venue_address: string | null };
 
 export default async function InvitationEditorPage({ params }: PageProps<"/dashboard/events/[eventId]/undangan">) {
   const { eventId } = await params;
   const supabase = await createClient();
-  const [{ data: event }, { data: sessions }, media] = await Promise.all([
+  const [{ data: event }, { data: sessions }, media, origin] = await Promise.all([
     supabase.from("events").select("id, slug, status, timezone, published_at, theme_config, gift_config").eq("id", eventId).maybeSingle(),
     supabase
       .from("event_sessions")
@@ -35,6 +37,7 @@ export default async function InvitationEditorPage({ params }: PageProps<"/dashb
       .eq("event_id", eventId)
       .order("starts_at"),
     loadMedia(supabase, eventId),
+    requestOrigin(),
   ]);
   if (!event) notFound();
 
@@ -164,15 +167,16 @@ export default async function InvitationEditorPage({ params }: PageProps<"/dashb
 
       <Section
         title="Love Story"
-        description={`Cerita perjalanan kalian dalam beberapa bab, maksimal ${MAX_STORY_CHAPTERS}. Kosongkan semua isian sebuah bab untuk menghapusnya. Bagian ini tidak tampil bila belum ada bab.`}
+        description={`Cerita perjalanan kalian dalam beberapa bab, maksimal ${MAX_STORY_CHAPTERS}, masing-masing boleh berfoto. Kosongkan semua isian sebuah bab untuk menghapusnya beserta fotonya. Bagian ini tidak tampil bila belum ada bab.`}
       >
         {/* key: form dipasang ulang setelah disimpan, agar bab yang dihapus atau bergeser tidak menyisakan isian lama. */}
-        <SectionForm key={content.story.map((c) => c.title).join("|")} action={saveStory.bind(null, event.id)} submitLabel="Simpan Love Story">
+        <SectionForm key={content.story.map((c) => `${c.id}:${c.title}`).join("|")} action={saveStory.bind(null, event.id)} submitLabel="Simpan Love Story">
           {Array.from({ length: Math.min(content.story.length + 1, MAX_STORY_CHAPTERS) }, (_, i) => {
             const chapter = content.story[i];
             return (
               <fieldset key={i} className="flex flex-col gap-4 rounded-xl border p-4">
                 <legend className="px-1 text-sm font-medium">{chapter ? `Bab ${i + 1}` : "Bab baru"}</legend>
+                <input type="hidden" name={`story.${i}.id`} value={chapter?.id ?? ""} />
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Field label="Judul" htmlFor={`story-title-${i}`}>
                     <Input
@@ -198,6 +202,16 @@ export default async function InvitationEditorPage({ params }: PageProps<"/dashb
                 <Field label="Cerita" htmlFor={`story-text-${i}`}>
                   <Textarea id={`story-text-${i}`} name={`story.${i}.text`} defaultValue={chapter?.text} maxLength={STORY_LIMITS.text} rows={4} />
                 </Field>
+                {chapter ? (
+                  <StoryPhoto
+                    eventId={event.id}
+                    chapterId={chapter.id}
+                    title={chapter.title}
+                    photo={media.story.find((m) => m.id === chapter.photo) ?? null}
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground">Foto bab bisa ditambahkan setelah bab ini disimpan.</p>
+                )}
               </fieldset>
             );
           })}
@@ -242,10 +256,13 @@ export default async function InvitationEditorPage({ params }: PageProps<"/dashb
       <Section title="Pengaturan">
         <SectionForm action={saveSettings.bind(null, event.id)}>
           <div className="grid gap-4 sm:grid-cols-2">
+            {/* Sering tertukar dengan alamat lokasi acara, jadi link lengkapnya ditampilkan. */}
             <Field
-              label="Alamat undangan"
+              label="Alamat link undangan"
               htmlFor="slug"
-              hint={event.published_at ? "Terkunci setelah dipublikasikan karena link sudah tersebar." : "Huruf kecil, angka, dan tanda hubung."}
+              hint={`Bagian akhir link yang dibagikan ke tamu: ${origin}/${event.slug}. Bukan alamat lokasi acara (isi lokasi di bagian Acara). ${
+                event.published_at ? "Terkunci setelah dipublikasikan karena link sudah tersebar." : "Huruf kecil, angka, dan tanda hubung."
+              }`}
             >
               <Input id="slug" name="slug" defaultValue={event.slug} maxLength={60} readOnly={Boolean(event.published_at)} className="h-11" />
             </Field>
