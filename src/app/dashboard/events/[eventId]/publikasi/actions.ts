@@ -90,3 +90,23 @@ export async function publishEvent(eventId: string): Promise<SaveState> {
   refresh();
   return { status: "saved", at: Date.now() };
 }
+
+// Promo masa peluncuran: semua pengecekan (promo aktif, pemilik, kuota per akun) ada di RPC claim_launch_promo.
+export async function claimPromo(eventId: string): Promise<SaveState> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("claim_launch_promo", { p_event_id: eventId });
+  if (error) {
+    const message = error.message.includes("sudah terpakai")
+      ? "Kuota gratis akunmu sudah terpakai untuk event lain. Paket berbayar di bawah tetap bisa dipilih."
+      : error.message.includes("tidak aktif")
+        ? "Promo peluncuran sudah berakhir. Pilih paket berbayar di bawah."
+        : error.message.includes("pemilik")
+          ? "Hanya pemilik event yang bisa mengaktifkan paket gratis."
+          : error.message.includes("berpaket")
+            ? "Event ini sudah punya paket."
+            : "Gagal mengaktifkan paket gratis. Coba lagi.";
+    return failed(message);
+  }
+  refresh();
+  return { status: "saved", at: Date.now() };
+}

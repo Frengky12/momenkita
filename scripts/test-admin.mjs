@@ -131,7 +131,7 @@ try {
   // Layout dan page dirender paralel oleh Next.js; tiap page wajib memanggil guard sendiri agar isinya tidak ikut terkirim di respons 404.
   const hostCookie = await sessionCookie(host.client);
   const adminCookie = await sessionCookie(adminUser.client);
-  const routes = ['/admin', '/admin/cari?q=uji', '/admin/laporan', '/admin/domain', '/admin/log', `/admin/events/${eventId}`, `/admin/pengguna/${host.id}`];
+  const routes = ['/admin', '/admin/cari?q=uji', '/admin/laporan', '/admin/domain', '/admin/promo', '/admin/log', `/admin/events/${eventId}`, `/admin/pengguna/${host.id}`];
   const leaks = [];
   for (const route of routes) {
     const res = await fetch(BASE + route, { headers: { cookie: hostCookie }, redirect: 'manual' });

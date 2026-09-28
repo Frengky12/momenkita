@@ -30,6 +30,8 @@ export const ACTION_LABEL: Record<string, string> = {
   adjust_credit: "Penyesuaian kredit",
   upsert_domain: "Simpan domain",
   set_domain_status: "Status domain",
+  set_launch_promo: "Atur promo peluncuran",
+  revoke_promo: "Cabut promo",
 };
 
 export const rupiah = (value: number) =>

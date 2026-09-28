@@ -2,8 +2,9 @@ import { notFound } from "next/navigation";
 import { CopyButton } from "@/components/dashboard/copy-button";
 import { SectionForm } from "@/components/dashboard/section-form";
 import { invitationBase } from "@/lib/invitation/origin";
+import { promoEndLabel, type PromoStatus } from "@/lib/promo";
 import { createClient } from "@/lib/supabase/server";
-import { publishEvent, startCheckout } from "./actions";
+import { claimPromo, publishEvent, startCheckout } from "./actions";
 import { OrderStatus } from "./order-status";
 
 const PACKAGE_LABEL: Record<string, string> = { classic: "Classic", complete: "Complete Experience", luxury: "Unlimited Luxury" };
@@ -23,10 +24,14 @@ export default async function PublishPage({ params, searchParams }: PageProps<"/
   const { eventId } = await params;
   const query = await searchParams;
   const supabase = await createClient();
-  const [{ data: event }, { data: catalog }, { data: orders }] = await Promise.all([
-    supabase.from("events").select("id, slug, status, package, published_at").eq("id", eventId).maybeSingle(),
+  const [{ data: event }, { data: catalog }, { data: orders }, { data: promoData }, { data: myClaims }, { data: auth }] = await Promise.all([
+    supabase.from("events").select("id, slug, status, package, published_at, owner_id").eq("id", eventId).maybeSingle(),
     supabase.from("catalog_items").select("code, item_type, name, price_idr, package, from_package").eq("is_active", true).order("price_idr"),
     supabase.from("orders").select("id, item_code, amount_idr, status, created_at, paid_at").eq("event_id", eventId).order("created_at", { ascending: false }),
+    supabase.rpc("launch_promo_status"),
+    // RLS promo_claims hanya mengembalikan klaim milik user ini.
+    supabase.from("promo_claims").select("event_id"),
+    supabase.auth.getClaims(),
   ]);
   if (!event) notFound();
 
@@ -49,6 +54,12 @@ export default async function PublishPage({ params, searchParams }: PageProps<"/
     orderList.find((o) => o.status === "pending" && offers.some((item) => item.code === o.item_code));
   const publicUrl = await invitationBase(supabase, event.id, event.slug);
 
+  const promo = promoData as PromoStatus | null;
+  const promoOffer = Boolean(promo?.active) && event.package === null;
+  const isOwner = event.owner_id === auth?.claims.sub;
+  const quotaLeft = (promo?.per_account ?? 0) - (myClaims?.length ?? 0);
+  const activatedByPromo = myClaims?.some((c) => c.event_id === event.id) ?? false;
+
   return (
     <div className="flex flex-col gap-6">
       {returnedOrder && <OrderStatus eventId={event.id} orderId={returnedOrder.id} initial={returnedOrder.status} />}
@@ -62,9 +73,14 @@ export default async function PublishPage({ params, searchParams }: PageProps<"/
               terkunci.
             </p>
           ) : event.package ? (
-            <p className="text-sm text-muted-foreground">Paket sudah aktif. Setelah dipublikasikan, link bisa dibagikan dan alamat undangan terkunci.</p>
+            <p className="text-sm text-muted-foreground">
+              {activatedByPromo ? "Paket aktif gratis lewat promo peluncuran. " : "Paket sudah aktif. "}
+              Setelah dipublikasikan, link bisa dibagikan dan alamat undangan terkunci.
+            </p>
           ) : (
-            <p className="text-sm text-muted-foreground">Pilih dan bayar paket di bawah untuk bisa mempublikasikan undangan.</p>
+            <p className="text-sm text-muted-foreground">
+              {promoOffer ? "Aktifkan paket gratis atau pilih paket berbayar di bawah" : "Pilih dan bayar paket di bawah"} untuk bisa mempublikasikan undangan.
+            </p>
           )}
         </div>
         {event.published_at ? (
@@ -86,10 +102,41 @@ export default async function PublishPage({ params, searchParams }: PageProps<"/
         )}
       </section>
 
+      {promo && promoOffer && (
+        <section className="flex flex-col gap-4 rounded-xl border-2 border-primary bg-card p-4 sm:p-6" aria-labelledby="promo">
+          <div className="flex flex-col gap-1">
+            <h2 id="promo" className="text-lg font-semibold">
+              Gratis selama masa peluncuran
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Paket {PACKAGE_LABEL[promo.package]} tanpa bayar, {promo.per_account === 1 ? "satu event" : `${promo.per_account} event`} per akun
+              {promo.ends_at ? `, sampai ${promoEndLabel(promo.ends_at)}` : ""}. Upgrade dan add-on tetap bisa dibeli kapan saja.
+            </p>
+          </div>
+          <ul className="list-disc pl-5 text-sm text-muted-foreground">
+            {PACKAGE_FEATURES[promo.package].map((f) => (
+              <li key={f}>{f}</li>
+            ))}
+          </ul>
+          {!isOwner ? (
+            <p className="text-sm">Hanya pemilik event yang bisa mengaktifkan paket gratis.</p>
+          ) : quotaLeft <= 0 ? (
+            <p className="text-sm">Kuota gratis akunmu sudah terpakai untuk event lain. Paket berbayar di bawah tetap bisa dipilih.</p>
+          ) : (
+            <SectionForm
+              action={claimPromo.bind(null, event.id)}
+              submitLabel={`Aktifkan ${PACKAGE_LABEL[promo.package]} gratis`}
+              pendingLabel="Mengaktifkan..."
+              confirmMessage={`Pakai kuota gratis akunmu untuk event ini? Kuota tidak bisa dipindahkan ke event lain setelah dipakai.`}
+            />
+          )}
+        </section>
+      )}
+
       {offers.length > 0 && (
         <section className="flex flex-col gap-4 rounded-xl border bg-card p-4 sm:p-6">
           <div className="flex flex-col gap-1">
-            <h2 className="text-lg font-semibold">{event.package ? `Paket aktif: ${PACKAGE_LABEL[event.package]}` : "Pilih paket"}</h2>
+            <h2 className="text-lg font-semibold">{event.package ? `Paket aktif: ${PACKAGE_LABEL[event.package]}` : promoOffer ? "Atau pilih paket berbayar" : "Pilih paket"}</h2>
             <p className="text-sm text-muted-foreground">Pembayaran lewat Midtrans: QRIS, e-wallet, atau virtual account.</p>
           </div>
           <ul className="flex flex-col gap-3">

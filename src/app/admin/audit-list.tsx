@@ -30,6 +30,10 @@ function describe(action: string, d: Details) {
       return `${Number(d.delta) > 0 ? "+" : ""}${d.delta} token, saldo ${d.balance}`;
     case "upsert_domain":
       return `${d.domain}, dibayar ${d.paid_by === "customer" ? "pelanggan" : "platform"}`;
+    case "set_launch_promo":
+      return d.active ? `Aktif, ${PACKAGE_LABEL[String(d.package)]}, ${d.per_account} event per akun${d.ends_at ? `, sampai ${dateTime(String(d.ends_at))}` : ""}` : "Dimatikan";
+    case "revoke_promo":
+      return `Paket ${PACKAGE_LABEL[String(d.package)]} dicabut, event kembali ke draf`;
     case "set_domain_status":
       return `${d.domain}: ${DOMAIN_STATUS_LABEL[String(d.status)] ?? d.status}`;
     default:

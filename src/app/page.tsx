@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Wordmark } from "@/components/wordmark";
+import { PACKAGE_LABEL } from "@/lib/admin";
+import { getPromoStatus, promoEndLabel } from "@/lib/promo";
 
 // Halaman depan sementara sampai landing page lengkap siap (butuh materi visual asli, harga final, S&K, Kebijakan Privasi).
 // Sengaja tanpa angka, testimoni, atau klaim: belum ada data nyata sebelum pilot.
 // Pengguna yang sudah login langsung diteruskan oleh /login ke tujuan `next`.
-export default function HomePage() {
+export default async function HomePage() {
+  const promo = await getPromoStatus();
   return (
     <div className="flex flex-1 flex-col">
       <header className="mx-3 mt-3 flex items-center justify-between gap-3 rounded-2xl border bg-card px-3 py-1.5 shadow-inner sm:mx-auto sm:w-full sm:max-w-3xl">
@@ -33,10 +36,19 @@ export default function HomePage() {
             Kirim undangan dan terima RSVP, sambut tamu dengan <span className="whitespace-nowrap">QR check-in</span>, lalu biarkan tamu memotret dari HP mereka tanpa instal
             aplikasi. Fotonya tampil di layar panggung dan terkumpul di satu galeri.
           </p>
-          <Button asChild className="h-11 px-6">
-            <Link href="/login?next=/dashboard/events/new">Buat undangan</Link>
-          </Button>
-          <p className="text-sm text-muted-foreground">Rakit dan pratinjau undangan gratis. Bayar paket saat undangan siap dipublikasikan.</p>
+          <div className="flex flex-col items-center gap-3 sm:flex-row">
+            <Button asChild className="h-11 px-6">
+              <Link href="/login?next=/dashboard/events/new">Buat undangan</Link>
+            </Button>
+            <Button asChild variant="outline" className="h-11 px-6">
+              <Link href="/contoh-botani">Lihat contoh undangan</Link>
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            {promo.active
+              ? `Selama masa peluncuran, paket ${PACKAGE_LABEL[promo.package]} gratis untuk ${promo.per_account === 1 ? "satu event" : `${promo.per_account} event`} per akun${promo.ends_at ? ` sampai ${promoEndLabel(promo.ends_at)}` : ""}.`
+              : "Rakit dan pratinjau undangan gratis. Bayar paket saat undangan siap dipublikasikan."}
+          </p>
         </div>
       </main>
     </div>

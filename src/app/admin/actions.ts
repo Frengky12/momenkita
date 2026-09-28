@@ -147,6 +147,43 @@ export async function upsertDomain(_prev: AdminState, formData: FormData): Promi
   return done(`Domain ${domain} tersimpan. Ubah statusnya setelah DNS valid di Vercel.`);
 }
 
+const PROMO_PACKAGES = ["classic", "complete", "luxury"];
+
+// Tanggal berakhir diisi per hari; promo berlaku sampai akhir hari itu (WIB).
+export async function setLaunchPromo(_prev: AdminState, formData: FormData): Promise<AdminState> {
+  const reason = reasonOf(formData);
+  if (!reason) return NEED_REASON;
+  const active = formData.get("active") === "on";
+  const pkg = String(formData.get("package") ?? "");
+  const perAccount = Number(formData.get("per_account"));
+  const endDate = String(formData.get("ends_on") ?? "");
+  if (!PROMO_PACKAGES.includes(pkg)) return failed("Pilih paket promo.");
+  if (!Number.isInteger(perAccount) || perAccount < 1 || perAccount > 10) return failed("Kuota per akun 1 sampai 10.");
+  if (endDate && !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) return failed("Format tanggal tidak valid.");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_set_launch_promo", {
+    p_active: active,
+    p_package: pkg,
+    p_per_account: perAccount,
+    // Tanggal boleh kosong (tanpa batas waktu); tipe hasil generate tidak menandai argumen ini nullable.
+    p_ends_at: (endDate ? `${endDate}T23:59:59+07:00` : null) as string,
+    p_reason: reason,
+  });
+  if (error) return rpcError(error);
+  refresh();
+  return done(active ? "Promo peluncuran aktif. Halaman depan diperbarui dalam 1 menit." : "Promo peluncuran dimatikan.");
+}
+
+export async function revokePromo(eventId: string, _prev: AdminState, formData: FormData): Promise<AdminState> {
+  const reason = reasonOf(formData);
+  if (!reason) return NEED_REASON;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_revoke_promo", { p_event_id: eventId, p_reason: reason });
+  if (error) return rpcError(error);
+  refresh();
+  return done("Promo dicabut; event kembali ke draf.");
+}
+
 const DOMAIN_STATUSES = ["pending_dns", "active", "failed", "expired"];
 
 export async function setDomainStatus(domainId: string, _prev: AdminState, formData: FormData): Promise<AdminState> {

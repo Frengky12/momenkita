@@ -699,6 +699,44 @@ export type Database = {
           },
         ]
       }
+      launch_promo: {
+        Row: {
+          active: boolean
+          ends_at: string | null
+          id: boolean
+          package: string
+          per_account: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          ends_at?: string | null
+          id?: boolean
+          package?: string
+          per_account?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          ends_at?: string | null
+          id?: boolean
+          package?: string
+          per_account?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "launch_promo_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           amount_idr: number
@@ -1017,6 +1055,48 @@ export type Database = {
         }
         Relationships: []
       }
+      promo_claims: {
+        Row: {
+          claimed_at: string
+          event_id: string | null
+          id: string
+          package: string
+          profile_id: string
+          revoked_at: string | null
+        }
+        Insert: {
+          claimed_at?: string
+          event_id?: string | null
+          id?: string
+          package: string
+          profile_id: string
+          revoked_at?: string | null
+        }
+        Update: {
+          claimed_at?: string
+          event_id?: string | null
+          id?: string
+          package?: string
+          profile_id?: string
+          revoked_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promo_claims_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promo_claims_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rate_limit_hits: {
         Row: {
           created_at: string
@@ -1283,8 +1363,22 @@ export type Database = {
         Args: { p_order_id: string; p_reason: string; p_revert_event?: boolean }
         Returns: Json
       }
+      admin_revoke_promo: {
+        Args: { p_event_id: string; p_reason: string }
+        Returns: undefined
+      }
       admin_set_domain_status: {
         Args: { p_domain_id: string; p_reason: string; p_status: string }
+        Returns: undefined
+      }
+      admin_set_launch_promo: {
+        Args: {
+          p_active: boolean
+          p_ends_at: string
+          p_package: string
+          p_per_account: number
+          p_reason: string
+        }
         Returns: undefined
       }
       admin_takedown_photo: {
@@ -1329,6 +1423,7 @@ export type Database = {
         Returns: boolean
       }
       checkin_card: { Args: { p_invitation_id: string }; Returns: Json }
+      claim_launch_promo: { Args: { p_event_id: string }; Returns: Json }
       claim_staff_link: {
         Args: { p_pin: string; p_token: string }
         Returns: Json
@@ -1365,6 +1460,7 @@ export type Database = {
       is_org_member: { Args: { p_organization_id: string }; Returns: boolean }
       is_org_owner: { Args: { p_organization_id: string }; Returns: boolean }
       is_registered_user: { Args: never; Returns: boolean }
+      launch_promo_status: { Args: never; Returns: Json }
       log_admin_action: {
         Args: {
           p_action: string
