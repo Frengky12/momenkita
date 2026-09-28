@@ -6,6 +6,8 @@ import type { SaveState } from "@/components/dashboard/section-form";
 import {
   LIMITS,
   MAX_GIFT_ACCOUNTS,
+  MAX_STORY_CHAPTERS,
+  STORY_LIMITS,
   THEMES,
   parseContent,
   slugify,
@@ -97,7 +99,19 @@ export async function saveGifts(eventId: string, _prev: SaveState, formData: For
 export async function saveTheme(eventId: string, _prev: SaveState, formData: FormData): Promise<SaveState> {
   const theme = field(formData, "theme");
   if (!(theme in THEMES)) return failed("Pilih salah satu tema.");
-  return updateContent(eventId, (c) => ({ ...c, theme: theme as ThemeId }));
+  const coverStyle = field(formData, "coverStyle") === "full" ? "full" : "frame";
+  return updateContent(eventId, (c) => ({ ...c, theme: theme as ThemeId, coverStyle }));
+}
+
+// Bab yang dikosongkan semua isiannya dianggap dihapus; urutan mengikuti urutan di form.
+export async function saveStory(eventId: string, _prev: SaveState, formData: FormData): Promise<SaveState> {
+  const chapters = Array.from({ length: MAX_STORY_CHAPTERS }, (_, i) => ({
+    title: field(formData, `story.${i}.title`).slice(0, STORY_LIMITS.title),
+    when: field(formData, `story.${i}.when`).slice(0, STORY_LIMITS.when),
+    text: field(formData, `story.${i}.text`).slice(0, STORY_LIMITS.text),
+  })).filter((c) => c.title || c.when || c.text);
+  if (chapters.some((c) => !c.title || !c.text)) return failed("Setiap bab perlu judul dan cerita. Kosongkan semua isian bab untuk menghapusnya.");
+  return updateContent(eventId, (c) => ({ ...c, story: chapters }));
 }
 
 export async function saveSettings(eventId: string, _prev: SaveState, formData: FormData): Promise<SaveState> {

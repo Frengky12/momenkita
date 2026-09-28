@@ -1,4 +1,4 @@
-import { Cormorant_Garamond, DM_Sans, Italiana } from "next/font/google";
+import { Cormorant_Garamond, DM_Sans, Italiana, Playfair_Display } from "next/font/google";
 import type { ThemeId } from "@/lib/invitation/content";
 
 // Satu kerangka undangan, banyak tema (PRD §5.1, docs/DESIGN_UNDANGAN.md): tema hanya menentukan huruf, token warna
@@ -9,6 +9,7 @@ import type { ThemeId } from "@/lib/invitation/content";
 const cormorant = Cormorant_Garamond({ subsets: ["latin"], weight: ["500", "600"], style: ["normal", "italic"], variable: "--font-cormorant" });
 const italiana = Italiana({ subsets: ["latin"], weight: "400", variable: "--font-italiana", preload: false });
 const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans", preload: false });
+const playfair = Playfair_Display({ subsets: ["latin"], style: ["normal", "italic"], variable: "--font-playfair", preload: false });
 
 export type ThemeStyle = {
   rootClass: string;
@@ -16,6 +17,8 @@ export type ThemeStyle = {
   coverLabel: string;
   photoFrame: "circle" | "arch";
   CoverDecor: (() => React.ReactNode) | null;
+  // Ornamen yang menempel pada foto sampul berbingkai (bukan pada layar), misalnya gunungan di kiri-kanan foto.
+  PhotoDecor: (() => React.ReactNode) | null;
   Divider: () => React.ReactNode;
 };
 
@@ -25,6 +28,7 @@ export const THEME_STYLES: Record<ThemeId, ThemeStyle> = {
     coverLabel: "font-display text-xl italic text-(--inv-accent)",
     photoFrame: "circle",
     CoverDecor: null,
+    PhotoDecor: null,
     Divider: KlasikDivider,
   },
   botani: {
@@ -33,7 +37,16 @@ export const THEME_STYLES: Record<ThemeId, ThemeStyle> = {
     coverLabel: "text-sm font-medium tracking-[0.3em] text-(--inv-muted) uppercase",
     photoFrame: "arch",
     CoverDecor: BotaniCoverDecor,
+    PhotoDecor: null,
     Divider: BotaniDivider,
+  },
+  adat: {
+    rootClass: `theme-adat ${cormorant.variable} ${playfair.variable} ${dmSans.variable}`,
+    coverLabel: "text-sm font-medium tracking-[0.3em] text-(--inv-muted) uppercase",
+    photoFrame: "arch",
+    CoverDecor: AdatCoverDecor,
+    PhotoDecor: AdatPhotoDecor,
+    Divider: AdatDivider,
   },
 };
 
@@ -180,6 +193,156 @@ function BotaniDivider() {
       <Leaf x={60} y={12} angle={-150} scale={0.45} />
       <Leaf x={60} y={12} angle={-30} scale={0.45} />
       <circle cx={60} cy={12} r={2.2} fill="var(--inv-bloom)" />
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Ornamen Adat Jawa (referensi ke-5): pita batik kawung, gunungan wayang, dan melati. Semua line-art buatan sendiri.
+
+// Satu bunga kawung: empat kelopak lonjong menghadap titik tengah.
+function Kawung({ x, y, r = 10 }: { x: number; y: number; r?: number }) {
+  const d = r * 0.7;
+  const petals: [number, number, number][] = [
+    [-d, -d, 45],
+    [d, -d, -45],
+    [-d, d, -45],
+    [d, d, 45],
+  ];
+  return (
+    <g fill="var(--inv-leaf-fill)" stroke="var(--inv-ornament)" strokeWidth={0.9}>
+      {petals.map(([dx, dy, a]) => (
+        <ellipse key={`${dx}-${dy}`} cx={x + dx} cy={y + dy} rx={r} ry={r * 0.52} transform={`rotate(${a} ${x + dx} ${y + dy})`} />
+      ))}
+      <circle cx={x} cy={y} r={r * 0.18} fill="var(--inv-ornament)" stroke="none" />
+    </g>
+  );
+}
+
+// Pita batik di tepi sampul: deretan kawung di antara dua garis.
+function BatikStrip({ id }: { id: string }) {
+  return (
+    <svg className="h-9 w-full" aria-hidden>
+      <defs>
+        <pattern id={id} width="30" height="36" patternUnits="userSpaceOnUse">
+          <Kawung x={15} y={18} r={7} />
+        </pattern>
+      </defs>
+      <rect width="100%" height="36" fill={`url(#${id})`} />
+      <line x1="0" x2="100%" y1="2" y2="2" stroke="var(--inv-ornament)" strokeWidth={1} />
+      <line x1="0" x2="100%" y1="34" y2="34" stroke="var(--inv-ornament)" strokeWidth={1} />
+    </svg>
+  );
+}
+
+function AdatCoverDecor() {
+  return (
+    <>
+      <div className="pointer-events-none absolute inset-x-0 top-0">
+        <BatikStrip id="kawung-atas" />
+      </div>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0">
+        <BatikStrip id="kawung-bawah" />
+      </div>
+    </>
+  );
+}
+
+// Gunungan: bentuk daun meruncing ke atas dengan pohon hayat di dalamnya dan gapura di dasarnya.
+function Gunungan() {
+  const outline = "M60 4 C78 40 104 72 112 122 C116 152 104 176 60 186 C16 176 4 152 8 122 C16 72 42 40 60 4 Z";
+  return (
+    <svg viewBox="0 0 120 190" className="h-full w-full overflow-visible" aria-hidden>
+      <path d={outline} fill="var(--inv-leaf-fill)" stroke="var(--inv-leaf)" strokeWidth={1.4} />
+      <path d={outline} transform="translate(60 100) scale(0.86) translate(-60 -100)" fill="none" stroke="var(--inv-leaf)" strokeWidth={0.8} />
+      <path d="M60 168 V26" stroke="var(--inv-leaf)" strokeWidth={1.2} />
+      {[58, 82, 106, 130].map((y) => (
+        <g key={y} fill="none" stroke="var(--inv-leaf)" strokeWidth={1} strokeLinecap="round">
+          <path d={`M60 ${y} C70 ${y - 8} 84 ${y - 6} 88 ${y + 4} C90 ${y + 10} 84 ${y + 13} 80 ${y + 9}`} />
+          <path d={`M60 ${y} C50 ${y - 8} 36 ${y - 6} 32 ${y + 4} C30 ${y + 10} 36 ${y + 13} 40 ${y + 9}`} />
+        </g>
+      ))}
+      <path d="M46 186 V166 C46 158 74 158 74 166 V186" fill="var(--inv-bg)" stroke="var(--inv-leaf)" strokeWidth={1.2} />
+      <path d="M53 186 V170 C53 165 67 165 67 170 V186" fill="none" stroke="var(--inv-leaf)" strokeWidth={0.8} />
+    </svg>
+  );
+}
+
+// Melati: lima kelopak runcing, putih dengan garis emas pucat.
+function Melati({ x, y, size = 1 }: { x: number; y: number; size?: number }) {
+  return (
+    <g transform={`translate(${x} ${y}) scale(${size})`}>
+      {[0, 72, 144, 216, 288].map((a) => (
+        <path
+          key={a}
+          transform={`rotate(${a})`}
+          d="M0 -2 C-4.5 -8 -3.5 -15 0 -19 C3.5 -15 4.5 -8 0 -2 Z"
+          fill="var(--inv-bloom-fill)"
+          stroke="var(--inv-bloom)"
+          strokeWidth={0.9}
+        />
+      ))}
+      <circle r={2.2} fill="var(--inv-bloom)" />
+    </g>
+  );
+}
+
+function MelatiGarland() {
+  const blooms: [number, number, number][] = [
+    [20, 30, 0.8],
+    [58, 22, 1.05],
+    [100, 30, 0.85],
+    [140, 18, 1.2],
+    [180, 30, 0.85],
+    [222, 22, 1.05],
+    [260, 30, 0.8],
+  ];
+  return (
+    <svg viewBox="0 0 280 52" className="w-full overflow-visible" aria-hidden>
+      <path d="M4 34 C70 18 210 18 276 34" fill="none" stroke="var(--inv-leaf)" strokeWidth={1.1} />
+      {[40, 80, 120, 160, 200, 240].map((x, i) => (
+        <ellipse
+          key={x}
+          cx={x}
+          cy={27}
+          rx={9}
+          ry={3.6}
+          transform={`rotate(${i % 2 ? 25 : -25} ${x} 27)`}
+          fill="var(--inv-leaf-fill)"
+          stroke="var(--inv-leaf)"
+          strokeWidth={0.8}
+        />
+      ))}
+      {blooms.map(([x, y, s]) => (
+        <Melati key={x} x={x} y={y} size={s} />
+      ))}
+    </svg>
+  );
+}
+
+// Gunungan mengapit bagian bawah foto sampul, melati menutupi batas bawahnya.
+function AdatPhotoDecor() {
+  const side = "pointer-events-none absolute bottom-3 -z-10 aspect-[120/190] h-[68%]";
+  return (
+    <>
+      <div className={`${side} -left-12 -rotate-8`}>
+        <Gunungan />
+      </div>
+      <div className={`${side} -right-12 rotate-8`}>
+        <Gunungan />
+      </div>
+      <div className="pointer-events-none absolute -bottom-7 left-1/2 w-[125%] -translate-x-1/2">
+        <MelatiGarland />
+      </div>
+    </>
+  );
+}
+
+function AdatDivider() {
+  return (
+    <svg viewBox="0 0 120 24" className="h-6 w-28" aria-hidden>
+      <path d="M6 12 H46 M74 12 H114" stroke="var(--inv-ornament)" strokeWidth={1} />
+      <Kawung x={60} y={12} r={6} />
     </svg>
   );
 }

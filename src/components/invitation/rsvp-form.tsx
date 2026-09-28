@@ -20,12 +20,14 @@ export function RsvpForm({
   guest,
   generalMaxPax,
   preview,
+  previewMessage = "Form ini aktif setelah undangan dipublikasikan.",
 }: {
   slug: string;
   personalSlug: string | null;
   guest: Guest | null;
   generalMaxPax: number;
   preview: boolean;
+  previewMessage?: string;
 }) {
   const [state, formAction, pending] = useActionState<RsvpState, FormData>(submitRsvp.bind(null, slug, personalSlug), { status: "idle" });
   const answered = guest && guest.rsvpStatus !== "pending" ? guest.rsvpStatus : null;
@@ -127,7 +129,7 @@ export function RsvpForm({
           {state.message}
         </p>
       )}
-      {preview && <p className="text-sm text-(--inv-muted)">Form ini aktif setelah undangan dipublikasikan.</p>}
+      {preview && <p className="text-sm text-(--inv-muted)">{previewMessage}</p>}
 
       <button
         type="submit"

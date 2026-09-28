@@ -6,6 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   LIMITS,
   MAX_GIFT_ACCOUNTS,
+  MAX_STORY_CHAPTERS,
+  STORY_LIMITS,
   THEMES,
   THEME_DESCRIPTIONS,
   TIMEZONE_LABELS,
@@ -17,7 +19,7 @@ import {
 } from "@/lib/invitation/content";
 import { loadMedia } from "@/lib/invitation/media";
 import { createClient } from "@/lib/supabase/server";
-import { deleteDraftEvent, deleteSession, saveCouple, saveGifts, saveSession, saveSettings, saveTexts, saveTheme } from "../actions";
+import { deleteDraftEvent, deleteSession, saveCouple, saveGifts, saveSession, saveSettings, saveStory, saveTexts, saveTheme } from "../actions";
 import { MediaManager } from "./media-manager";
 
 type Session = { id: string; name: string; starts_at: string; ends_at: string; venue_name: string | null; venue_address: string | null };
@@ -72,6 +74,26 @@ export default async function InvitationEditorPage({ params }: PageProps<"/dashb
                 <span className="flex flex-col gap-1">
                   <span className="font-medium">{THEMES[id]}</span>
                   <span className="text-sm text-muted-foreground">{THEME_DESCRIPTIONS[id]}</span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+          <fieldset className="grid gap-3 sm:grid-cols-2">
+            <legend className="mb-2 text-sm font-medium">Gaya sampul</legend>
+            {(
+              [
+                ["frame", "Foto berbingkai", "Foto sampul dalam bingkai sesuai tema, dengan ornamen di sekelilingnya."],
+                ["full", "Foto penuh layar", "Foto sampul menutupi layar; nama dan tombol di bagian bawah. Butuh foto sampul."],
+              ] as const
+            ).map(([value, label, hint]) => (
+              <label
+                key={value}
+                className="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border p-4 has-[:checked]:border-primary has-[:checked]:bg-primary/5 has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50"
+              >
+                <input type="radio" name="coverStyle" value={value} defaultChecked={content.coverStyle === value} className="mt-1 size-4 accent-primary" />
+                <span className="flex flex-col gap-1">
+                  <span className="font-medium">{label}</span>
+                  <span className="text-sm text-muted-foreground">{hint}</span>
                 </span>
               </label>
             ))}
@@ -137,6 +159,48 @@ export default async function InvitationEditorPage({ params }: PageProps<"/dashb
           >
             <Textarea id="whatsapp" name="whatsapp" defaultValue={content.texts.whatsapp} maxLength={LIMITS.whatsapp} rows={8} />
           </Field>
+        </SectionForm>
+      </Section>
+
+      <Section
+        title="Love Story"
+        description={`Cerita perjalanan kalian dalam beberapa bab, maksimal ${MAX_STORY_CHAPTERS}. Kosongkan semua isian sebuah bab untuk menghapusnya. Bagian ini tidak tampil bila belum ada bab.`}
+      >
+        {/* key: form dipasang ulang setelah disimpan, agar bab yang dihapus atau bergeser tidak menyisakan isian lama. */}
+        <SectionForm key={content.story.map((c) => c.title).join("|")} action={saveStory.bind(null, event.id)} submitLabel="Simpan Love Story">
+          {Array.from({ length: Math.min(content.story.length + 1, MAX_STORY_CHAPTERS) }, (_, i) => {
+            const chapter = content.story[i];
+            return (
+              <fieldset key={i} className="flex flex-col gap-4 rounded-xl border p-4">
+                <legend className="px-1 text-sm font-medium">{chapter ? `Bab ${i + 1}` : "Bab baru"}</legend>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Field label="Judul" htmlFor={`story-title-${i}`}>
+                    <Input
+                      id={`story-title-${i}`}
+                      name={`story.${i}.title`}
+                      defaultValue={chapter?.title}
+                      maxLength={STORY_LIMITS.title}
+                      placeholder="Contoh: Awal bertemu"
+                      className="h-11"
+                    />
+                  </Field>
+                  <Field label="Waktu (opsional)" htmlFor={`story-when-${i}`}>
+                    <Input
+                      id={`story-when-${i}`}
+                      name={`story.${i}.when`}
+                      defaultValue={chapter?.when}
+                      maxLength={STORY_LIMITS.when}
+                      placeholder="Contoh: Maret 2022"
+                      className="h-11"
+                    />
+                  </Field>
+                </div>
+                <Field label="Cerita" htmlFor={`story-text-${i}`}>
+                  <Textarea id={`story-text-${i}`} name={`story.${i}.text`} defaultValue={chapter?.text} maxLength={STORY_LIMITS.text} rows={4} />
+                </Field>
+              </fieldset>
+            );
+          })}
         </SectionForm>
       </Section>
 

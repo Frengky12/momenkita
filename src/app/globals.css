@@ -175,6 +175,34 @@
   background-image: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27180%27 height=%27180%27%3E%3Cg fill=%27%23a8957a%27 fill-opacity=%27.16%27%3E%3Ccircle cx=%2712%27 cy=%2718%27 r=%27.9%27/%3E%3Ccircle cx=%2771%27 cy=%2744%27 r=%271.2%27/%3E%3Ccircle cx=%27140%27 cy=%2711%27 r=%27.7%27/%3E%3Ccircle cx=%2733%27 cy=%27101%27 r=%271%27/%3E%3Ccircle cx=%27118%27 cy=%2788%27 r=%27.8%27/%3E%3Ccircle cx=%27164%27 cy=%27129%27 r=%271.1%27/%3E%3Ccircle cx=%2758%27 cy=%27156%27 r=%27.8%27/%3E%3Ccircle cx=%27101%27 cy=%27170%27 r=%271%27/%3E%3Ccircle cx=%27150%27 cy=%2762%27 r=%27.6%27/%3E%3C/g%3E%3C/svg%3E");
   color-scheme: light;
 }
+/* Tema "Adat Jawa" (referensi ke-5, docs/DESIGN_UNDANGAN.md): gading, taupe, emas pucat, motif batik kawung.
+   Kontras teks dicek AA: teks #3a342c, muted #675d4f, aksen #6f5a41, tombol putih di atas #6f5d48.
+   Warna kawung dan ornamen hanya dekorasi. */
+.theme-adat {
+  --inv-bg: #f8f5ef;
+  --inv-card: #fffdf8;
+  --inv-text: #3a342c;
+  --inv-muted: #675d4f;
+  --inv-accent: #6f5a41;
+  --inv-ornament: #b7a684;
+  --inv-leaf: #a6966f;
+  --inv-leaf-fill: #f1ece0;
+  --inv-bloom: #b9a77f;
+  --inv-bloom-fill: #ffffff;
+  --inv-line: #e6dfd0;
+  --inv-field: #8c7c63;
+  --inv-button: #6f5d48;
+  --inv-button-hover: #5b4b39;
+  --inv-button-text: #ffffff;
+  --inv-band: #eee8db;
+  --inv-error: #9b2c2c;
+  --inv-font-display: var(--font-playfair);
+  font-family: var(--font-dm-sans), var(--font-sans), sans-serif;
+  /* Batik kawung: empat kelopak lonjong menghadap satu titik, berulang diagonal. Sangat pudar agar teks tetap bersih. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2748%27 height=%2748%27%3E%3Cg fill=%27none%27 stroke=%27%23b7a684%27 stroke-opacity=%27.28%27 stroke-width=%27.8%27%3E%3Cellipse cx=%2714%27 cy=%2714%27 rx=%2710%27 ry=%275.2%27 transform=%27rotate(45 14 14)%27/%3E%3Cellipse cx=%2734%27 cy=%2714%27 rx=%2710%27 ry=%275.2%27 transform=%27rotate(-45 34 14)%27/%3E%3Cellipse cx=%2714%27 cy=%2734%27 rx=%2710%27 ry=%275.2%27 transform=%27rotate(-45 14 34)%27/%3E%3Cellipse cx=%2734%27 cy=%2734%27 rx=%2710%27 ry=%275.2%27 transform=%27rotate(45 34 34)%27/%3E%3C/g%3E%3Cg fill=%27%23b7a684%27 fill-opacity=%27.3%27%3E%3Ccircle cx=%2724%27 cy=%2724%27 r=%271.4%27/%3E%3Ccircle cx=%270%27 cy=%270%27 r=%271.4%27/%3E%3Ccircle cx=%2748%27 cy=%270%27 r=%271.4%27/%3E%3Ccircle cx=%270%27 cy=%2748%27 r=%271.4%27/%3E%3Ccircle cx=%2748%27 cy=%2748%27 r=%271.4%27/%3E%3C/g%3E%3C/svg%3E");
+  color-scheme: light;
+}
+
 /* Italiana hanya punya satu ketebalan tanpa miring; cegah tebal dan miring palsu dari kelas bersama. */
 .theme-botani .font-display {
   font-weight: 400;

@@ -97,7 +97,8 @@ export async function listGalleryPhotos(eventId: string, cursor: { before?: stri
     .eq("event_id", eventId)
     .eq("status", "approved")
     .eq("over_quota", false)
-    .lte("visible_after", new Date().toISOString())
+    // visible_after diisi jam database; toleransi 2 detik untuk selisih jam server aplikasi (sama seperti konsol moderasi).
+    .lte("visible_after", new Date(Date.now() + 2000).toISOString())
     .order("created_at", { ascending: false })
     .limit(cursor.after ? 200 : PAGE_SIZE + 1);
   if (cursor.before) query = query.lt("created_at", cursor.before);

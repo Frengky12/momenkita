@@ -1,17 +1,25 @@
 // Isi undangan tersimpan di events.theme_config dan events.gift_config (jsonb).
 // Parser di sini selalu mengembalikan bentuk lengkap, sehingga halaman undangan tidak rusak karena field kosong atau data lama.
 
-export const THEMES = { klasik: "Elegan klasik", botani: "Botani" } as const;
+export const THEMES = { klasik: "Elegan klasik", botani: "Botani", adat: "Adat Jawa" } as const;
 export const THEME_DESCRIPTIONS: Record<keyof typeof THEMES, string> = {
   klasik: "Krem dan emas, huruf serif klasik, foto mempelai bulat.",
   botani: "Kertas krem dengan ranting daun dan bunga, aksen tembaga, foto berbingkai lengkung.",
+  adat: "Gading bermotif batik kawung, gunungan dan melati mengapit foto, aksen taupe.",
 };
 export type ThemeId = keyof typeof THEMES;
 
 export type Person = { nickname: string; fullName: string; father: string; mother: string; instagram: string };
 
+// Love Story (teks saja): bab berurutan, misalnya "Awal bertemu", "Lamaran".
+export type StoryChapter = { title: string; when: string; text: string };
+// Sampul "frame": foto dalam bingkai tema; "full": foto menutupi layar dengan teks di bagian bawah.
+export type CoverStyle = "frame" | "full";
+
 export type InvitationContent = {
   theme: ThemeId;
+  coverStyle: CoverStyle;
+  story: StoryChapter[];
   couple: { groom: Person; bride: Person; order: "groom-first" | "bride-first" };
   texts: { opening: string; quote: string; quoteSource: string; closing: string; whatsapp: string };
   rsvpDeadline: string | null;
@@ -22,6 +30,8 @@ export type GiftContent = { accounts: GiftAccount[]; address: string };
 
 export const LIMITS = { whatsapp: 1000, name: 60, fullName: 120, parent: 120, instagram: 30, text: 1000, quote: 500, bank: 40, number: 40, address: 500 };
 export const MAX_GIFT_ACCOUNTS = 3;
+export const MAX_STORY_CHAPTERS = 6;
+export const STORY_LIMITS = { title: 60, when: 40, text: 1200 };
 
 // Netral agama; host bebas menggantinya.
 export const DEFAULT_TEXTS: InvitationContent["texts"] = {
@@ -69,6 +79,14 @@ export function parseContent(raw: unknown): InvitationContent {
   const texts = (v.texts ?? {}) as Record<string, unknown>;
   return {
     theme: typeof v.theme === "string" && v.theme in THEMES ? (v.theme as ThemeId) : "klasik",
+    coverStyle: v.coverStyle === "full" ? "full" : "frame",
+    story: (Array.isArray(v.story) ? v.story : [])
+      .map((c) => {
+        const chapter = (c ?? {}) as Record<string, unknown>;
+        return { title: text(chapter.title, STORY_LIMITS.title), when: text(chapter.when, STORY_LIMITS.when), text: text(chapter.text, STORY_LIMITS.text) };
+      })
+      .filter((c) => c.title && c.text)
+      .slice(0, MAX_STORY_CHAPTERS),
     couple: {
       groom: person(couple.groom),
       bride: person(couple.bride),

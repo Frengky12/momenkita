@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Countdown } from "@/components/invitation/countdown";
 import { CopyText } from "@/components/invitation/copy-text";
+import { DemoBar } from "@/components/invitation/demo-bar";
 import { Gallery } from "@/components/invitation/gallery";
 import { MarkOpened } from "@/components/invitation/mark-opened";
 import { MusicPlayer } from "@/components/invitation/music-player";
@@ -9,12 +10,22 @@ import { THEME_STYLES } from "@/components/invitation/themes";
 import { QrCode } from "@/components/qr-code";
 import { TIMEZONE_LABELS, coupleNames, formatDate, formatTime, type EventTimezone, type Person } from "@/lib/invitation/content";
 import { googleCalendarUrl, mapsUrl, wazeUrl } from "@/lib/invitation/links";
+import type { DemoView } from "@/lib/invitation/demo";
 import type { InvitationData } from "@/lib/invitation/load";
 import type { MediaItem } from "@/lib/invitation/media";
 import { cn } from "@/lib/utils";
 
 
 const GENERAL_MAX_PAX = 5;
+
+// Sampul foto penuh: token warna di dalam sampul diganti putih agar teks tema terbaca di atas foto. Gradasi gelap
+// di bawah (minimal 55% hitam di area teks) menjaga kontras teks putih di atas 4.5:1 walau fotonya terang.
+const FULL_COVER_TOKENS = {
+  "--inv-text": "#ffffff",
+  "--inv-muted": "rgb(255 255 255 / 0.88)",
+  "--inv-accent": "#ffffff",
+  "--inv-ornament": "rgb(255 255 255 / 0.7)",
+} as React.CSSProperties;
 
 const pillLink =
   "inline-flex min-h-11 items-center justify-center rounded-full border border-(--inv-field) px-4 text-sm font-medium transition-colors hover:bg-(--inv-band) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--inv-text)";
@@ -25,17 +36,21 @@ export function Invitation({
   invitationUrl,
   icsBaseUrl,
   preview = false,
+  demo,
 }: {
   data: InvitationData;
   invitationUrl: string;
   icsBaseUrl: string;
   preview?: boolean;
+  // Undangan contoh: tema dan sampul dari URL, form RSVP tidak menyimpan, kamera tamu tidak dibuka.
+  demo?: DemoView;
 }) {
   const { event, sessions, guest, wishes, media } = data;
-  const { content, gifts, timezone } = event;
+  const { gifts, timezone } = event;
+  const content = demo ? { ...event.content, theme: demo.theme, coverStyle: demo.coverStyle } : event.content;
   const [first, second] = coupleNames(content);
   const style = THEME_STYLES[content.theme];
-  const { Divider, CoverDecor } = style;
+  const { Divider, CoverDecor, PhotoDecor } = style;
   const [firstPhoto, secondPhoto] = content.couple.order === "bride-first" ? [media.bride, media.groom] : [media.groom, media.bride];
   const tz = TIMEZONE_LABELS[timezone as EventTimezone] ?? "";
   const mainSession = sessions[0];
@@ -43,38 +58,64 @@ export function Invitation({
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date());
   const eventDay = sessions.some((s) => new Intl.DateTimeFormat("en-CA", { timeZone: timezone }).format(new Date(s.starts_at)) === today);
   const experience = event.package === "complete" || event.package === "luxury";
-  const cameraOpen = experience && eventDay && !preview;
+  const cameraOpen = experience && eventDay && !preview && !demo;
+  const fullCover = content.coverStyle === "full" && media.cover;
 
   return (
     <div className={cn(style.rootClass, "min-h-dvh bg-(--inv-bg) text-(--inv-text)")}>
       {preview && (
         <p className="sticky top-0 z-10 bg-(--inv-band) px-4 py-2 text-center text-sm font-medium">Pratinjau. Undangan belum dipublikasikan.</p>
       )}
+      {demo && <DemoBar slug={event.slug} view={demo} />}
       {guest && !preview && <MarkOpened slug={event.slug} personalSlug={guest.personalSlug} />}
       {media.music && <MusicPlayer url={media.music.url} />}
 
-      <header className="relative isolate flex min-h-dvh flex-col items-center justify-center gap-6 overflow-hidden px-6 py-16 text-center">
-        {CoverDecor && (
-          <div className="absolute inset-0 -z-10">
-            <CoverDecor />
-          </div>
+      <header
+        style={fullCover ? FULL_COVER_TOKENS : undefined}
+        className={cn(
+          "relative isolate flex min-h-dvh flex-col items-center gap-6 overflow-hidden px-6 text-center text-(--inv-text)",
+          fullCover ? "justify-end pt-16 pb-14 [text-shadow:0_1px_12px_rgb(0_0_0/0.45)]" : "justify-center py-16",
         )}
-        {media.cover && (
-          // Bingkai lengkung khas undangan cetak; foto dipotong ke rasio 4:5 agar sampul tetap muat satu layar HP.
-          // eslint-disable-next-line @next/next/no-img-element -- signed URL R2
-          <img
-            src={media.cover.url}
-            alt={`Foto ${first.nickname} dan ${second.nickname}`}
-            width={media.cover.width}
-            height={media.cover.height}
-            fetchPriority="high"
-            className={cn(
-              "aspect-[4/5] w-auto rounded-t-full object-cover",
-              style.photoFrame === "arch"
-                ? "h-[40dvh] max-h-[24rem] outline-1 outline-offset-6 outline-(--inv-ornament)"
-                : "h-[46dvh] max-h-[28rem] border-4 border-(--inv-card) shadow-sm",
-            )}
-          />
+      >
+        {fullCover ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element -- signed URL R2 */}
+            <img
+              src={fullCover.url}
+              alt={`Foto ${first.nickname} dan ${second.nickname}`}
+              width={fullCover.width}
+              height={fullCover.height}
+              fetchPriority="high"
+              className="absolute inset-0 -z-20 size-full object-cover"
+            />
+            <div aria-hidden className="absolute inset-x-0 bottom-0 -z-10 h-3/4 bg-linear-to-t from-black/85 via-black/55 to-transparent" />
+          </>
+        ) : (
+          CoverDecor && (
+            <div className="absolute inset-0 -z-10">
+              <CoverDecor />
+            </div>
+          )
+        )}
+        {!fullCover && media.cover && (
+          <div className={cn("relative isolate", PhotoDecor && "mb-6")}>
+            {PhotoDecor && <PhotoDecor />}
+            {/* Bingkai lengkung khas undangan cetak; foto dipotong ke rasio 4:5 agar sampul tetap muat satu layar HP. */}
+            {/* eslint-disable-next-line @next/next/no-img-element -- signed URL R2 */}
+            <img
+              src={media.cover.url}
+              alt={`Foto ${first.nickname} dan ${second.nickname}`}
+              width={media.cover.width}
+              height={media.cover.height}
+              fetchPriority="high"
+              className={cn(
+                "aspect-[4/5] w-auto rounded-t-full object-cover",
+                style.photoFrame === "arch"
+                  ? "h-[40dvh] max-h-[24rem] outline-1 outline-offset-6 outline-(--inv-ornament)"
+                  : "h-[46dvh] max-h-[28rem] border-4 border-(--inv-card) shadow-sm",
+              )}
+            />
+          </div>
         )}
         <p className={style.coverLabel}>Undangan Pernikahan</p>
         <h1 className="font-display text-5xl leading-tight font-semibold [overflow-wrap:anywhere] sm:text-6xl">
@@ -115,6 +156,7 @@ export function Invitation({
           <h2 id="mempelai" className="sr-only">
             Mempelai
           </h2>
+          <Monogram first={first} second={second} />
           <Profile person={first} photo={firstPhoto} frame={style.photoFrame} role={content.couple.order === "bride-first" ? "Putri" : "Putra"} />
           <p className="font-display text-5xl text-(--inv-accent) italic" aria-hidden>
             &amp;
@@ -125,6 +167,24 @@ export function Invitation({
         {mainSession && (
           <section aria-label="Hitung mundur" className="flex flex-col items-center gap-4 text-center">
             <Countdown startsAt={mainSession.starts_at} endsAt={sessions[sessions.length - 1].ends_at} />
+          </section>
+        )}
+
+        {content.story.length > 0 && (
+          <section aria-labelledby="kisah" className="flex flex-col gap-8">
+            <SectionTitle id="kisah" Divider={Divider}>
+              Kisah Kami
+            </SectionTitle>
+            <ol className="flex flex-col gap-10 border-l border-(--inv-ornament) pl-6">
+              {content.story.map((chapter, i) => (
+                <li key={i} className="relative flex flex-col gap-2">
+                  <span aria-hidden className="absolute top-2 -left-[30.5px] size-3 rounded-full border border-(--inv-ornament) bg-(--inv-bg)" />
+                  {chapter.when && <p className="text-sm tracking-wide text-(--inv-muted) uppercase">{chapter.when}</p>}
+                  <h3 className="font-display text-2xl font-semibold">{chapter.title}</h3>
+                  <p className="leading-relaxed whitespace-pre-line">{chapter.text}</p>
+                </li>
+              ))}
+            </ol>
           </section>
         )}
 
@@ -207,7 +267,8 @@ export function Invitation({
                 personalSlug={guest?.personalSlug ?? null}
                 guest={guest}
                 generalMaxPax={GENERAL_MAX_PAX}
-                preview={preview}
+                preview={preview || Boolean(demo)}
+                previewMessage={demo ? "Ini undangan contoh, jadi konfirmasi tidak dikirim." : undefined}
               />
             ) : (
               <p className="text-center text-(--inv-muted)">Konfirmasi kehadiran sudah ditutup.</p>
@@ -291,6 +352,20 @@ export function Invitation({
         </Link>
       </footer>
     </div>
+  );
+}
+
+// Inisial nama panggilan dengan garis tegak, pembuka bagian mempelai (referensi ke-5).
+function Monogram({ first, second }: { first: Person; second: Person }) {
+  const initial = (p: Person) => (p.nickname || p.fullName).trim().charAt(0).toUpperCase();
+  const [a, b] = [initial(first), initial(second)];
+  if (!a || !b) return null;
+  return (
+    <p aria-hidden className="flex items-center gap-5 font-display text-6xl leading-none text-(--inv-accent)">
+      <span>{a}</span>
+      <span className="h-16 w-px bg-(--inv-ornament)" />
+      <span>{b}</span>
+    </p>
   );
 }
 
